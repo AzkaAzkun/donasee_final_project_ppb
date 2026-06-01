@@ -24,17 +24,39 @@ class AllocationModel {
   });
 
   factory AllocationModel.fromFirestore(Map<String, dynamic> d, String id) {
+    final data = d;
     return AllocationModel(
       id: id,
-      kampanyeId: d['kampanyeId'] ?? '',
-      kampanyeJudul: d['kampanyeJudul'] ?? '',
-      judulAlokasi: d['judulAlokasi'] ?? '',
-      deskripsi: d['deskripsi'] ?? '',
-      nominal: (d['nominal'] ?? 0) as int,
-      adminId: d['adminId'] ?? '',
-      adminNama: d['adminNama'] ?? '',
-      createdAt: (d['createdAt'] as Timestamp).toDate(),
+      kampanyeId: _readString(data['kampanyeId']),
+      kampanyeJudul: _readString(data['kampanyeJudul']),
+      judulAlokasi: _readString(data['judulAlokasi']),
+      deskripsi: _readString(data['deskripsi']),
+      nominal: _readInt(data['nominal']),
+      adminId: _readString(data['adminId']),
+      adminNama: _readString(data['adminNama']),
+      createdAt: _readDateTime(data['createdAt']),
     );
+  }
+
+  static String _readString(dynamic value) {
+    if (value == null) return '';
+    return value.toString();
+  }
+
+  static int _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  static DateTime _readDateTime(dynamic value) {
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    if (value is int) {
+      return DateTime.fromMillisecondsSinceEpoch(value);
+    }
+    final parsed = DateTime.tryParse(value?.toString() ?? '');
+    return parsed ?? DateTime.now();
   }
 
   Map<String, dynamic> toFirestore() => {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'firebase_options.dart';
 import 'services/auth_service.dart';
 import 'screens/auth/auth_wrapper.dart';
@@ -14,6 +15,8 @@ void main() async {
     url: 'https://eoocxqpiliaizflfxsmg.supabase.co/rest/v1/',
     anonKey: 'sb_publishable_YuMVty5vqkjjroACxlc02g_AxB8Isso',
   );
+
+  await initializeDateFormatting('id_ID', null);
 
   runApp(const MyApp());
 }

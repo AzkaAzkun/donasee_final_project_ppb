@@ -314,15 +314,14 @@ class _FormAlokasiScreenState extends State<FormAlokasiScreen> {
           kampanyeJudul: campaignTitle,
         );
 
-        // Inform user about notification sending state (simulation vs real)
+        // Inform user that notification was triggered (delivery depends on server key).
         if (mounted) {
-          final sent = NotificationService.hasServerKey;
           messenger.showSnackBar(
-            SnackBar(
-              content: Text(sent
-                  ? 'Notifikasi dikirim ke donatur.'
-                  : 'Notifikasi disimulasikan (server key belum diatur).'),
-              backgroundColor: const Color(0xFF1D9E75),
+            const SnackBar(
+              content: Text(
+                'Notifikasi diproses — penerimaan bergantung pada konfigurasi server FCM.',
+              ),
+              backgroundColor: Color(0xFF1D9E75),
             ),
           );
         }

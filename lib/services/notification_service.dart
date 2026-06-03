@@ -8,12 +8,6 @@ import 'package:http/http.dart' as http;
 class NotificationService {
   final _db = FirebaseFirestore.instance;
   final _fcm = FirebaseMessaging.instance;
-  static const _serverKey = 'YOUR_FCM_SERVER_KEY';
-
-  static bool get hasServerKey => _serverKey != 'YOUR_FCM_SERVER_KEY';
-  // If you deploy the Cloud Function, set this URL to the function endpoint.
-  // Example: https://us-central1-YOUR_PROJECT.cloudfunctions.net/sendAllocationNotifications
-  static const functionsUrl = 'YOUR_CLOUD_FUNCTION_URL';
 
   Future<void> initAndSaveToken(String uid) async {
     try {
@@ -38,37 +32,6 @@ class NotificationService {
     required String kampanyeId,
     required String kampanyeJudul,
   }) async {
-    // Prefer calling a deployed Cloud Function (secure) if URL provided.
-    if (functionsUrl != 'YOUR_CLOUD_FUNCTION_URL') {
-      try {
-        final resp = await http.post(
-          Uri.parse(functionsUrl),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'kampanyeId': kampanyeId,
-            'kampanyeJudul': kampanyeJudul,
-          }),
-        );
-        if (kDebugMode) {
-          print('Cloud Function response: ${resp.statusCode} ${resp.body}');
-        }
-        return;
-      } catch (e) {
-        if (kDebugMode) {
-          print('Gagal memanggil Cloud Function: $e');
-        }
-        // Fall through to server-key based sending if configured
-      }
-    }
-
-    // If no Cloud Function configured, fall back to server key (if set).
-    if (_serverKey == 'YOUR_FCM_SERVER_KEY') {
-      if (kDebugMode) {
-        print('FCM server key not set — not sending real notifications.');
-      }
-      return;
-    }
-
     try {
       final donations = await _db
           .collection('donations')
@@ -104,11 +67,13 @@ class NotificationService {
     required String title,
     required String body,
   }) async {
+    const serverKey = 'YOUR_FCM_SERVER_KEY';
+
     await http.post(
       Uri.parse('https://fcm.googleapis.com/fcm/send'),
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'key=$_serverKey',
+        'Authorization': 'key=$serverKey',
       },
       body: jsonEncode({
         'to': token,

@@ -22,7 +22,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? _errorMsg;
 
   Future<void> _register() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
     // Kalau role admin, nama organisasi wajib diisi
     if (_role == 'admin' && _orgCtrl.text.trim().isEmpty) {
@@ -124,8 +126,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       keyboardType: TextInputType.emailAddress,
                       decoration: _inputDecor('Email', Icons.email_outlined),
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'Email wajib diisi';
-                        if (!v.contains('@')) return 'Format email tidak valid';
+                                            if (v == null || v.isEmpty) {
+                                              return 'Email wajib diisi';
+                                            }
+                                            if (!v.contains('@')) {
+                                              return 'Format email tidak valid';
+                                            }
                         return null;
                       },
                     ),
@@ -148,9 +154,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       ),
                       validator: (v) {
-                        if (v == null || v.isEmpty)
+                        if (v == null || v.isEmpty) {
                           return 'Password wajib diisi';
-                        if (v.length < 6) return 'Password minimal 6 karakter';
+                        }
+                        if (v.length < 6) {
+                          return 'Password minimal 6 karakter';
+                        }
                         return null;
                       },
                     ),

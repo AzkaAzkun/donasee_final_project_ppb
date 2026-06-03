@@ -2,6 +2,7 @@ import 'package:donasee_final_project_ppb/services/auth_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'jelajah_screen.dart';
+import '../kabar/kabar_baik_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -16,7 +17,7 @@ class _MainNavigationState extends State<MainNavigation> {
   final _screens = const [
     JelajahScreen(),
     _PlaceholderScreen(label: 'Donasiku', icon: Icons.favorite),
-    _PlaceholderScreen(label: 'Kabar Baik', icon: Icons.newspaper),
+    KabarBaikScreen(),
   ];
 
   @override

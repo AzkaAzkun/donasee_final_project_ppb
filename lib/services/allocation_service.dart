@@ -9,14 +9,18 @@ class AllocationService {
   }
 
   // Untuk tab "Kabar Penggunaan Dana" di dalam detail kampanye
-  Stream<List<AllocationModel>> getAllocationsByCampaignStream(String campaignId) {
+  Stream<List<AllocationModel>> getAllocationsByCampaignStream(
+    String campaignId,
+  ) {
     return _col
         .where('kampanyeId', isEqualTo: campaignId)
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((s) => s.docs
-            .map((d) => AllocationModel.fromFirestore(d.data(), d.id))
-            .toList());
+        .map(
+          (s) => s.docs
+              .map((d) => AllocationModel.fromFirestore(d.data(), d.id))
+              .toList(),
+        );
   }
 
   // Untuk tab "Kabar Baik" global
@@ -24,12 +28,22 @@ class AllocationService {
     return _col
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((s) => s.docs
-            .map((d) => AllocationModel.fromFirestore(d.data(), d.id))
-            .toList());
+        .map(
+          (s) => s.docs
+              .map((d) => AllocationModel.fromFirestore(d.data(), d.id))
+              .toList(),
+        );
+  }
+
+  Stream<AllocationModel?> getAllocationByIdStream(String id) {
+    return _col.doc(id).snapshots().map((snapshot) {
+      if (!snapshot.exists || snapshot.data() == null) return null;
+      return AllocationModel.fromFirestore(snapshot.data()!, snapshot.id);
+    });
   }
 
   Future<void> updateAllocation(String id, Map<String, dynamic> fields) async {
+    if (fields.isEmpty) return;
     await _col.doc(id).update(fields);
   }
 

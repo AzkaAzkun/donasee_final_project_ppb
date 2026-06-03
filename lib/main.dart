@@ -12,7 +12,7 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   await Supabase.initialize(
-    url: 'https://eoocxqpiliaizflfxsmg.supabase.co/rest/v1/',
+    url: 'https://eoocxqpiliaizflfxsmg.supabase.co',
     anonKey: 'sb_publishable_YuMVty5vqkjjroACxlc02g_AxB8Isso',
   );
 

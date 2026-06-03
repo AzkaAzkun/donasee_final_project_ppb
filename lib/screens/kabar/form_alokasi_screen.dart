@@ -1,4 +1,6 @@
+
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:donasee_final_project_ppb/models/allocation_model.dart';
 import 'package:donasee_final_project_ppb/models/campaign_model.dart';
 import 'package:donasee_final_project_ppb/services/allocation_service.dart';
@@ -165,14 +167,19 @@ class _FormAlokasiScreenState extends State<FormAlokasiScreen> {
   }
 
   Stream<List<CampaignModel>> _campaignStream() {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
     return FirebaseFirestore.instance
         .collection('campaigns')
-        .orderBy('createdAt', descending: true)
+        .where('organisasiId', isEqualTo: uid)
         .snapshots()
         .map(
-          (snapshot) => snapshot.docs
-              .map((doc) => CampaignModel.fromFirestore(doc.data(), doc.id))
-              .toList(),
+          (snapshot) {
+            final list = snapshot.docs
+                .map((doc) => CampaignModel.fromFirestore(doc.data(), doc.id))
+                .toList();
+            list.sort((a, b) => b.createdAt.compareTo(a.createdAt)); // Sort in-memory
+            return list;
+          },
         );
   }
 

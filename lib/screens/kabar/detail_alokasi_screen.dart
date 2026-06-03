@@ -3,6 +3,7 @@ import 'package:donasee_final_project_ppb/screens/kabar/form_alokasi_screen.dart
 import 'package:donasee_final_project_ppb/services/allocation_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class DetailAlokasiScreen extends StatefulWidget {
   final String allocationId;
@@ -25,46 +26,57 @@ class _DetailAlokasiScreenState extends State<DetailAlokasiScreen> {
       decimalDigits: 0,
     );
     final dateFormat = DateFormat('d MMM yyyy, HH:mm', 'id_ID');
+    final currentUserUid = FirebaseAuth.instance.currentUser?.uid ?? '';
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detail Alokasi'),
-        backgroundColor: const Color(0xFF1D9E75),
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            tooltip: 'Edit',
-            onPressed: _isDeleting ? null : () => _openEdit(context),
+    return StreamBuilder<AllocationModel?>(
+      stream: _service.getAllocationByIdStream(widget.allocationId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Scaffold(
+            body: _ErrorState(message: snapshot.error.toString()),
+          );
+        }
+
+        final allocation = snapshot.data;
+        if (allocation == null) {
+          return const Scaffold(
+            body: _EmptyState(
+              message: 'Data alokasi tidak ditemukan',
+            ),
+          );
+        }
+
+        final isOwner = allocation.adminId == currentUserUid;
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Detail Alokasi'),
+            backgroundColor: const Color(0xFF1D9E75),
+            foregroundColor: Colors.white,
+            actions: isOwner
+                ? [
+                    IconButton(
+                      icon: const Icon(Icons.edit),
+                      tooltip: 'Edit',
+                      onPressed: _isDeleting ? null : () => _openEdit(context),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete),
+                      tooltip: 'Hapus',
+                      onPressed: _isDeleting ? null : () => _confirmDelete(context),
+                    ),
+                  ]
+                : null,
           ),
-          IconButton(
-            icon: const Icon(Icons.delete),
-            tooltip: 'Hapus',
-            onPressed: _isDeleting ? null : () => _confirmDelete(context),
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          StreamBuilder<AllocationModel?>(
-            stream: _service.getAllocationByIdStream(widget.allocationId),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              if (snapshot.hasError) {
-                return _ErrorState(message: snapshot.error.toString());
-              }
-
-              final allocation = snapshot.data;
-              if (allocation == null) {
-                return const _EmptyState(
-                  message: 'Data alokasi tidak ditemukan',
-                );
-              }
-
-              return ListView(
+          body: Stack(
+            children: [
+              ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
                   Container(
@@ -135,16 +147,16 @@ class _DetailAlokasiScreenState extends State<DetailAlokasiScreen> {
                     ),
                   ),
                 ],
-              );
-            },
+              ),
+              if (_isDeleting)
+                Container(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
+            ],
           ),
-          if (_isDeleting)
-            Container(
-              color: Colors.black.withValues(alpha: 0.1),
-              child: const Center(child: CircularProgressIndicator()),
-            ),
-        ],
-      ),
+        );
+      },
     );
   }
 

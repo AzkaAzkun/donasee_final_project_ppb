@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:donasee_final_project_ppb/services/donation_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../services/campaign_service.dart';
@@ -5,6 +7,7 @@ import '../../services/allocation_service.dart';
 import '../../models/campaign_model.dart';
 import '../../models/allocation_model.dart';
 import 'edit_kampanye_screen.dart';
+import '../donasiku/form_donasi_screen.dart';
 
 class DetailKampanyeScreen extends StatelessWidget {
   final String campaignId;
@@ -17,8 +20,11 @@ class DetailKampanyeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fmt =
-        NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+    final fmt = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
     return Scaffold(
       body: StreamBuilder<CampaignModel?>(
         stream: CampaignService().getCampaignByIdStream(campaignId),
@@ -27,85 +33,101 @@ class DetailKampanyeScreen extends StatelessWidget {
           if (campaign == null) {
             return const Center(child: CircularProgressIndicator());
           }
-          return CustomScrollView(slivers: [
-            // App bar dengan tombol admin
-            SliverAppBar(
-              expandedHeight: 200,
-              pinned: true,
-              backgroundColor: const Color(0xFF1D9E75),
-              foregroundColor: Colors.white,
-              flexibleSpace: FlexibleSpaceBar(
-                title: Text(
-                  campaign.judul,
-                  style: const TextStyle(fontSize: 14),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                background: Container(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF1D9E75), Color(0xFF085041)],
-                    ),
+          return CustomScrollView(
+            slivers: [
+              // App bar dengan tombol admin
+              SliverAppBar(
+                expandedHeight: 200,
+                pinned: true,
+                backgroundColor: const Color(0xFF1D9E75),
+                foregroundColor: Colors.white,
+                flexibleSpace: FlexibleSpaceBar(
+                  title: Text(
+                    campaign.judul,
+                    style: const TextStyle(fontSize: 14),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.campaign_rounded,
-                            size: 56, color: Colors.white54),
-                        const SizedBox(height: 8),
-                        Text(campaign.organisasiNama,
+                  background: Container(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [Color(0xFF1D9E75), Color(0xFF085041)],
+                      ),
+                    ),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.campaign_rounded,
+                            size: 56,
+                            color: Colors.white54,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            campaign.organisasiNama,
                             style: const TextStyle(
-                                color: Colors.white70, fontSize: 13)),
-                      ],
+                              color: Colors.white70,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              actions: isAdmin
-                  ? [
-                      IconButton(
-                        icon: const Icon(Icons.edit),
-                        tooltip: 'Edit Kampanye',
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                EditKampanyeScreen(campaign: campaign),
+                actions: isAdmin
+                    ? [
+                        IconButton(
+                          icon: const Icon(Icons.edit),
+                          tooltip: 'Edit Kampanye',
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  EditKampanyeScreen(campaign: campaign),
+                            ),
                           ),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete),
-                        tooltip: 'Hapus Kampanye',
-                        onPressed: () => _confirmDelete(context, campaign),
-                      ),
-                    ]
-                  : null,
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
+                        IconButton(
+                          icon: const Icon(Icons.delete),
+                          tooltip: 'Hapus Kampanye',
+                          onPressed: () => _confirmDelete(context, campaign),
+                        ),
+                      ]
+                    : null,
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Judul & organisasi
-                      Text(campaign.judul,
-                          style: const TextStyle(
-                              fontSize: 20, fontWeight: FontWeight.bold)),
+                      Text(
+                        campaign.judul,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      Text(campaign.organisasiNama,
-                          style: const TextStyle(color: Color(0xFF0F6E56))),
+                      Text(
+                        campaign.organisasiNama,
+                        style: const TextStyle(color: Color(0xFF0F6E56)),
+                      ),
                       const SizedBox(height: 16),
 
                       // Statistik
-                      Row(children: [
-                        _statBox('Terkumpul', fmt.format(campaign.terkumpul)),
-                        const SizedBox(width: 8),
-                        _statBox('Target', fmt.format(campaign.targetDana)),
-                      ]),
+                      Row(
+                        children: [
+                          _statBox('Terkumpul', fmt.format(campaign.terkumpul)),
+                          const SizedBox(width: 8),
+                          _statBox('Target', fmt.format(campaign.targetDana)),
+                        ],
+                      ),
                       const SizedBox(height: 12),
 
                       // Progress bar
@@ -115,7 +137,8 @@ class DetailKampanyeScreen extends StatelessWidget {
                           value: campaign.progressPersen,
                           backgroundColor: const Color(0xFFE1F5EE),
                           valueColor: const AlwaysStoppedAnimation(
-                              Color(0xFF1D9E75)),
+                            Color(0xFF1D9E75),
+                          ),
                           minHeight: 8,
                         ),
                       ),
@@ -124,13 +147,20 @@ class DetailKampanyeScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                              '${(campaign.progressPersen * 100).toInt()}% tercapai',
-                              style: const TextStyle(
-                                  color: Color(0xFF085041), fontSize: 12)),
+                            '${(campaign.progressPersen * 100).toInt()}% tercapai',
+                            style: const TextStyle(
+                              color: Color(0xFF085041),
+                              fontSize: 12,
+                            ),
+                          ),
                           if (campaign.sisaHari >= 0)
-                            Text('${campaign.sisaHari} hari lagi',
-                                style: const TextStyle(
-                                    color: Colors.grey, fontSize: 12)),
+                            Text(
+                              '${campaign.sisaHari} hari lagi',
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 12,
+                              ),
+                            ),
                         ],
                       ),
                       const SizedBox(height: 20),
@@ -138,7 +168,9 @@ class DetailKampanyeScreen extends StatelessWidget {
                       // Status badge
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
                         decoration: BoxDecoration(
                           color: campaign.isAktif
                               ? const Color(0xFFE1F5EE)
@@ -160,37 +192,40 @@ class DetailKampanyeScreen extends StatelessWidget {
 
                       // Tab: Info | Kabar Penggunaan Dana
                       DefaultTabController(
-                        length: 2,
-                        child: Column(children: [
-                          const TabBar(
-                            labelColor: Color(0xFF1D9E75),
-                            unselectedLabelColor: Colors.grey,
-                            indicatorColor: Color(0xFF1D9E75),
-                            tabs: [
-                              Tab(text: 'Info'),
-                              Tab(text: 'Kabar Dana'),
-                            ],
-                          ),
-                          SizedBox(
-                            height: 300,
-                            child: TabBarView(children: [
-                              // Tab Info — deskripsi
-                              SingleChildScrollView(
-                                padding: const EdgeInsets.all(12),
-                                child: Text(campaign.deskripsi,
-                                    style: const TextStyle(
-                                        fontSize: 14, height: 1.5)),
+                        length: isAdmin ? 3 : 2,
+                        child: Column(
+                          children: [
+                            TabBar(
+                              labelColor: const Color(0xFF1D9E75),
+                              tabs: [
+                                const Tab(text: 'Info'),
+                                const Tab(text: 'Kabar Dana'),
+                                if (isAdmin) const Tab(text: 'Verifikasi'),
+                              ],
+                            ),
+                            SizedBox(
+                              height: 300,
+                              child: TabBarView(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.all(8),
+                                    child: Text(campaign.deskripsi),
+                                  ),
+                                  _AllocationTab(campaignId: campaignId),
+                                  if (isAdmin)
+                                    _VerifikasiTab(campaignId: campaignId),
+                                ],
                               ),
-                              // Tab Kabar — alokasi dana (integrasi Anggota 3)
-                              _AllocationTab(campaignId: campaignId),
-                            ]),
-                          ),
-                        ]),
+                            ),
+                          ],
+                        ),
                       ),
-                    ]),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ]);
+            ],
+          );
         },
       ),
       // Tombol donasi (integrasi Anggota 2)
@@ -207,19 +242,21 @@ class DetailKampanyeScreen extends StatelessWidget {
                 foregroundColor: Colors.white,
                 minimumSize: const Size.fromHeight(48),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               onPressed: () {
-                // Navigasi ke FormDonasiScreen (Anggota 2)
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Fitur donasi akan tersedia setelah Sprint 2 A2'),
-                    backgroundColor: Color(0xFF1D9E75),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => FormDonasiScreen(campaign: campaign),
                   ),
                 );
               },
-              child: const Text('Donasi Sekarang',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              child: const Text(
+                'Donasi Sekarang',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
             );
           },
         ),
@@ -235,13 +272,20 @@ class DetailKampanyeScreen extends StatelessWidget {
           color: const Color(0xFFF1EFE8),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-          const SizedBox(height: 4),
-          Text(value,
-              style:
-                  const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-        ]),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -265,8 +309,7 @@ class DetailKampanyeScreen extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child:
-                const Text('Batal', style: TextStyle(color: Colors.grey)),
+            child: const Text('Batal', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
@@ -274,7 +317,8 @@ class DetailKampanyeScreen extends StatelessWidget {
               backgroundColor: Colors.red,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
             child: const Text('Hapus'),
           ),
@@ -288,21 +332,22 @@ class DetailKampanyeScreen extends StatelessWidget {
   }
 }
 
-// Widget tab alokasi — placeholder, nanti diintegrasi Anggota 3
 class _AllocationTab extends StatelessWidget {
   final String campaignId;
   const _AllocationTab({required this.campaignId});
 
   @override
   Widget build(BuildContext context) {
-    final fmt =
-        NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+    final fmt = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
     return StreamBuilder<List<AllocationModel>>(
       stream: AllocationService().getAllocationsByCampaignStream(campaignId),
       builder: (context, snapshot) {
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(
-              child: Text('Belum ada laporan penggunaan dana'));
+          return const Center(child: Text('Belum ada laporan penggunaan dana'));
         }
         return ListView.builder(
           itemCount: snapshot.data!.length,
@@ -311,16 +356,104 @@ class _AllocationTab extends StatelessWidget {
             return ListTile(
               leading: const CircleAvatar(
                 backgroundColor: Color(0xFFE1F5EE),
-                child:
-                    Icon(Icons.receipt_long, color: Color(0xFF1D9E75)),
+                child: Icon(Icons.receipt_long, color: Color(0xFF1D9E75)),
               ),
               title: Text(a.judulAlokasi),
-              subtitle: Text(a.deskripsi,
-                  maxLines: 1, overflow: TextOverflow.ellipsis),
-              trailing: Text(fmt.format(a.nominal),
-                  style: const TextStyle(
-                      color: Color(0xFF1D9E75),
-                      fontWeight: FontWeight.bold)),
+              subtitle: Text(
+                a.deskripsi,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              trailing: Text(
+                fmt.format(a.nominal),
+                style: const TextStyle(
+                  color: Color(0xFF1D9E75),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _VerifikasiTab extends StatelessWidget {
+  final String campaignId;
+  const _VerifikasiTab({required this.campaignId});
+
+  @override
+  Widget build(BuildContext context) {
+    final fmt = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('donations')
+          .where('kampanyeId', isEqualTo: campaignId)
+          .where('status', isEqualTo: 'menunggu_verifikasi')
+          .orderBy('createdAt', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(
+            child: Text('Tidak ada donasi menunggu verifikasi'),
+          );
+        }
+        final docs = snapshot.data!.docs;
+        return ListView.builder(
+          padding: const EdgeInsets.all(8),
+          itemCount: docs.length,
+          itemBuilder: (_, i) {
+            final data = docs[i].data() as Map<String, dynamic>;
+            final donationId = docs[i].id;
+            final nominal = (data['nominal'] ?? 0) as int;
+            final kampanyeId = data['kampanyeId'] as String;
+
+            return ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: Color(0xFFFAEEDA),
+                child: Icon(Icons.pending_outlined, color: Color(0xFF633806)),
+              ),
+              title: Text(
+                data['donaturNama'] ?? '-',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+              subtitle: Text(
+                fmt.format(nominal),
+                style: const TextStyle(color: Color(0xFF1D9E75)),
+              ),
+              trailing: ElevatedButton(
+                onPressed: () async {
+                  await DonationService().konfirmasiDonasi(
+                    donationId,
+                    kampanyeId,
+                    nominal,
+                  );
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Donasi dikonfirmasi!')),
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1D9E75),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  textStyle: const TextStyle(fontSize: 12),
+                ),
+                child: const Text('Konfirmasi'),
+              ),
             );
           },
         );

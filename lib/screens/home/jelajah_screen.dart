@@ -123,6 +123,7 @@ class _JelajahScreenState extends State<JelajahScreen> {
             itemBuilder: (_, i) => CampaignCard(
               campaign: campaigns[i],
               isAdmin: isAdmin,
+              currentUserId: _user?.uid,
             ),
           );
         },

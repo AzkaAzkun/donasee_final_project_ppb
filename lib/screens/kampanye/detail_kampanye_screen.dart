@@ -12,9 +12,11 @@ import '../donasiku/form_donasi_screen.dart';
 class DetailKampanyeScreen extends StatelessWidget {
   final String campaignId;
   final bool isAdmin;
+  final String? currentUserId; // UID user yang sedang login
   const DetailKampanyeScreen({
     required this.campaignId,
     this.isAdmin = false,
+    this.currentUserId,
     super.key,
   });
 
@@ -191,35 +193,43 @@ class DetailKampanyeScreen extends StatelessWidget {
                       const SizedBox(height: 20),
 
                       // Tab: Info | Kabar Penggunaan Dana
-                      DefaultTabController(
-                        length: isAdmin ? 3 : 2,
-                        child: Column(
-                          children: [
-                            TabBar(
-                              labelColor: const Color(0xFF1D9E75),
-                              tabs: [
-                                const Tab(text: 'Info'),
-                                const Tab(text: 'Kabar Dana'),
-                                if (isAdmin) const Tab(text: 'Verifikasi'),
-                              ],
-                            ),
-                            SizedBox(
-                              height: 300,
-                              child: TabBarView(
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.all(8),
-                                    child: Text(campaign.deskripsi),
-                                  ),
-                                  _AllocationTab(campaignId: campaignId),
-                                  if (isAdmin)
-                                    _VerifikasiTab(campaignId: campaignId),
+                      // Tab Verifikasi hanya untuk admin pemilik kampanye ini
+                      Builder(builder: (context) {
+                        final isOwner = isAdmin &&
+                            currentUserId != null &&
+                            campaign.organisasiId == currentUserId;
+                        return DefaultTabController(
+                          length: isOwner ? 3 : 2,
+                          child: Column(
+                            children: [
+                              TabBar(
+                                labelColor: const Color(0xFF1D9E75),
+                                unselectedLabelColor: Colors.grey,
+                                indicatorColor: const Color(0xFF1D9E75),
+                                tabs: [
+                                  const Tab(text: 'Info'),
+                                  const Tab(text: 'Kabar Dana'),
+                                  if (isOwner) const Tab(text: 'Verifikasi'),
                                 ],
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
+                              SizedBox(
+                                height: 300,
+                                child: TabBarView(
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.all(8),
+                                      child: Text(campaign.deskripsi),
+                                    ),
+                                    _AllocationTab(campaignId: campaignId),
+                                    if (isOwner)
+                                      _VerifikasiTab(campaignId: campaignId),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
                     ],
                   ),
                 ),
@@ -228,8 +238,10 @@ class DetailKampanyeScreen extends StatelessWidget {
           );
         },
       ),
-      // Tombol donasi (integrasi Anggota 2)
-      bottomNavigationBar: Padding(
+      // Tombol donasi — hanya untuk donatur, bukan admin
+      bottomNavigationBar: isAdmin
+          ? const SizedBox.shrink()
+          : Padding(
         padding: const EdgeInsets.all(16),
         child: StreamBuilder<CampaignModel?>(
           stream: CampaignService().getCampaignByIdStream(campaignId),
@@ -346,6 +358,23 @@ class _AllocationTab extends StatelessWidget {
     return StreamBuilder<List<AllocationModel>>(
       stream: AllocationService().getAllocationsByCampaignStream(campaignId),
       builder: (context, snapshot) {
+        // Loading state — jangan langsung show empty
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        // Error state — tampilkan pesan error, bukan data kosong
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'Gagal memuat data: ${snapshot.error}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.red, fontSize: 12),
+              ),
+            ),
+          );
+        }
         if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return const Center(child: Text('Belum ada laporan penggunaan dana'));
         }
@@ -391,20 +420,45 @@ class _VerifikasiTab extends StatelessWidget {
       decimalDigits: 0,
     );
 
+    // Query tanpa orderBy untuk menghindari composite index
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('donations')
           .where('kampanyeId', isEqualTo: campaignId)
           .where('status', isEqualTo: 'menunggu_verifikasi')
-          .orderBy('createdAt', descending: true)
           .snapshots(),
       builder: (context, snapshot) {
+        // Loading state — jangan langsung show empty
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        // Error state
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                'Gagal memuat data: ${snapshot.error}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.red, fontSize: 12),
+              ),
+            ),
+          );
+        }
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return const Center(
             child: Text('Tidak ada donasi menunggu verifikasi'),
           );
         }
-        final docs = snapshot.data!.docs;
+        // Sort client-side by createdAt descending
+        final docs = [...snapshot.data!.docs];
+        docs.sort((a, b) {
+          final aTime = (a.data() as Map<String, dynamic>)['createdAt'];
+          final bTime = (b.data() as Map<String, dynamic>)['createdAt'];
+          if (aTime == null || bTime == null) return 0;
+          return (bTime as Timestamp).compareTo(aTime as Timestamp);
+        });
+
         return ListView.builder(
           padding: const EdgeInsets.all(8),
           itemCount: docs.length,

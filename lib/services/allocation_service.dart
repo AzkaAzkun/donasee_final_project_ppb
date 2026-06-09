@@ -14,12 +14,16 @@ class AllocationService {
   ) {
     return _col
         .where('kampanyeId', isEqualTo: campaignId)
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map(
-          (s) => s.docs
-              .map((d) => AllocationModel.fromFirestore(d.data(), d.id))
-              .toList(),
+          (s) {
+            final list = s.docs
+                .map((d) => AllocationModel.fromFirestore(d.data(), d.id))
+                .toList();
+            // Sort client-side (no composite index needed)
+            list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            return list;
+          },
         );
   }
 

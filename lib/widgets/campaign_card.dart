@@ -6,7 +6,13 @@ import '../screens/kampanye/detail_kampanye_screen.dart';
 class CampaignCard extends StatelessWidget {
   final CampaignModel campaign;
   final bool isAdmin;
-  const CampaignCard({required this.campaign, this.isAdmin = false, super.key});
+  final String? currentUserId;
+  const CampaignCard({
+    required this.campaign,
+    this.isAdmin = false,
+    this.currentUserId,
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -19,6 +25,7 @@ class CampaignCard extends StatelessWidget {
           builder: (_) => DetailKampanyeScreen(
             campaignId: campaign.id,
             isAdmin: isAdmin,
+            currentUserId: currentUserId,
           ),
         ),
       ),

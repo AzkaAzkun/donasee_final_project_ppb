@@ -39,46 +39,37 @@ class DetailKampanyeScreen extends StatelessWidget {
             slivers: [
               // App bar dengan tombol admin
               SliverAppBar(
+                title: const Text('Detail Kampanye', style: TextStyle(fontSize: 16)),
                 expandedHeight: 200,
                 pinned: true,
                 backgroundColor: const Color(0xFF1D9E75),
                 foregroundColor: Colors.white,
                 flexibleSpace: FlexibleSpaceBar(
-                  title: Text(
-                    campaign.judul,
-                    style: const TextStyle(fontSize: 14),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  background: Container(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFF1D9E75), Color(0xFF085041)],
-                      ),
-                    ),
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.campaign_rounded,
-                            size: 56,
-                            color: Colors.white54,
+
+                  background: campaign.imageUrl != null
+                      // ── Gambar dari Supabase Storage ──────────────
+                      ? Stack(fit: StackFit.expand, children: [
+                          Image.network(
+                            campaign.imageUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => _gradientBanner(campaign),
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            campaign.organisasiNama,
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 13,
+                          // Overlay gelap agar judul tetap terbaca
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withValues(alpha: 0.55),
+                                ],
+                              ),
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
+                        ])
+                      // ── Fallback: gradien hijau + icon ────────────
+                      : _gradientBanner(campaign),
                 ),
                 actions: isAdmin
                     ? [
@@ -301,6 +292,23 @@ class DetailKampanyeScreen extends StatelessWidget {
       ),
     );
   }
+
+  // Fallback banner: gradien hijau + icon megaphone
+  static Widget _gradientBanner(CampaignModel campaign) => Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF1D9E75), Color(0xFF085041)],
+          ),
+        ),
+        child: Center(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.campaign_rounded,
+                size: 56, color: Colors.white54),
+          ]),
+        ),
+      );
 
   Future<void> _confirmDelete(BuildContext context, CampaignModel c) async {
     final confirmed = await showDialog<bool>(

@@ -6,7 +6,13 @@ import '../screens/kampanye/detail_kampanye_screen.dart';
 class CampaignCard extends StatelessWidget {
   final CampaignModel campaign;
   final bool isAdmin;
-  const CampaignCard({required this.campaign, this.isAdmin = false, super.key});
+  final String? currentUserId;
+  const CampaignCard({
+    required this.campaign,
+    this.isAdmin = false,
+    this.currentUserId,
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -19,12 +25,12 @@ class CampaignCard extends StatelessWidget {
           builder: (_) => DetailKampanyeScreen(
             campaignId: campaign.id,
             isAdmin: isAdmin,
+            currentUserId: currentUserId,
           ),
         ),
       ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -38,57 +44,119 @@ class CampaignCard extends StatelessWidget {
           ],
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // Nama organisasi
-          Text(campaign.organisasiNama,
-              style: const TextStyle(
-                  fontSize: 11,
-                  color: Color(0xFF0F6E56),
-                  fontWeight: FontWeight.w500)),
-          const SizedBox(height: 4),
-          // Judul kampanye
-          Text(campaign.judul,
-              style:
-                  const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 10),
-          // Progress bar
+          // ── Thumbnail ──────────────────────────────────────────────
           ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: campaign.progressPersen,
-              backgroundColor: const Color(0xFFE1F5EE),
-              valueColor:
-                  const AlwaysStoppedAnimation(Color(0xFF1D9E75)),
-              minHeight: 6,
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(12)),
+            child: campaign.imageUrl != null
+                ? Image.network(
+                    campaign.imageUrl!,
+                    height: 140,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (_, child, progress) => progress == null
+                        ? child
+                        : Container(
+                            height: 140,
+                            color: const Color(0xFFE1F5EE),
+                            child: const Center(
+                                child: CircularProgressIndicator(
+                                    color: Color(0xFF1D9E75), strokeWidth: 2)),
+                          ),
+                    errorBuilder: (_, _, _) => _fallbackBanner(),
+                  )
+                : _fallbackBanner(),
+          ),
+
+          // ── Info ───────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(campaign.organisasiNama,
+                    style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF0F6E56),
+                        fontWeight: FontWeight.w500)),
+                const SizedBox(height: 4),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(campaign.judul,
+                          style: const TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w600)),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: campaign.sisaHari <= 7
+                            ? const Color(0xFFFAEEDA)
+                            : const Color(0xFFE1F5EE),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text('${campaign.sisaHari} hari lagi',
+                          style: TextStyle(
+                              fontSize: 10,
+                              color: campaign.sisaHari <= 7
+                                  ? const Color(0xFF633806)
+                                  : const Color(0xFF1D9E75),
+                              fontWeight: FontWeight.w500)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: campaign.progressPersen,
+                    backgroundColor: const Color(0xFFE1F5EE),
+                    valueColor:
+                        const AlwaysStoppedAnimation(Color(0xFF1D9E75)),
+                    minHeight: 6,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Terkumpul ${fmt.format(campaign.terkumpul)}',
+                          style: const TextStyle(
+                              fontSize: 11, color: Colors.grey)),
+                      Text(
+                          '${(campaign.progressPersen * 100).toInt()}% dari ${fmt.format(campaign.targetDana)}',
+                          style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF085041),
+                              fontWeight: FontWeight.w500)),
+                    ]),
+                const SizedBox(height: 8),
+              ],
             ),
           ),
-          const SizedBox(height: 6),
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text('Terkumpul ${fmt.format(campaign.terkumpul)}',
-                style: const TextStyle(fontSize: 11, color: Colors.grey)),
-            Text(
-                '${(campaign.progressPersen * 100).toInt()}% dari ${fmt.format(campaign.targetDana)}',
-                style: const TextStyle(
-                    fontSize: 11,
-                    color: Color(0xFF085041),
-                    fontWeight: FontWeight.w500)),
-          ]),
-          const SizedBox(height: 8),
-          // Badge sisa hari
-          if (campaign.sisaHari <= 7)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFAEEDA),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text('${campaign.sisaHari} hari lagi',
-                  style: const TextStyle(
-                      fontSize: 10,
-                      color: Color(0xFF633806),
-                      fontWeight: FontWeight.w500)),
-            ),
         ]),
       ),
     );
   }
+
+  Widget _fallbackBanner() => Container(
+        height: 140,
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF1D9E75), Color(0xFF085041)],
+          ),
+        ),
+        child: Center(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.campaign_rounded,
+                size: 40, color: Colors.white54),
+          ]),
+        ),
+      );
 }

@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import '../../services/campaign_service.dart';
+import '../../services/image_upload_service.dart';
 import '../../models/campaign_model.dart';
 
 class EditKampanyeScreen extends StatefulWidget {
@@ -16,8 +19,12 @@ class _EditKampanyeScreenState extends State<EditKampanyeScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _deskripsiCtrl;
   final _svc = CampaignService();
+  final _imgSvc = ImageUploadService();
+  final _picker = ImagePicker();
 
   late DateTime _batasTanggal;
+  File? _newImageFile;       // gambar baru yang dipilih
+  bool _removeImage = false; // flag hapus gambar saat ini
   bool _loading = false;
 
   @override
@@ -25,6 +32,45 @@ class _EditKampanyeScreenState extends State<EditKampanyeScreen> {
     super.initState();
     _deskripsiCtrl = TextEditingController(text: widget.campaign.deskripsi);
     _batasTanggal = widget.campaign.batasTanggal;
+  }
+
+  Future<void> _pickImage() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const SizedBox(height: 8),
+          Container(
+              width: 40, height: 4,
+              decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(4))),
+          const SizedBox(height: 16),
+          ListTile(
+            leading: const Icon(Icons.camera_alt, color: Color(0xFF1D9E75)),
+            title: const Text('Kamera'),
+            onTap: () => Navigator.pop(context, ImageSource.camera),
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_library, color: Color(0xFF1D9E75)),
+            title: const Text('Galeri'),
+            onTap: () => Navigator.pop(context, ImageSource.gallery),
+          ),
+          const SizedBox(height: 8),
+        ]),
+      ),
+    );
+    if (source == null) return;
+    final xfile = await _picker.pickImage(
+        source: source, imageQuality: 75, maxWidth: 1024);
+    if (xfile != null) {
+      setState(() {
+        _newImageFile = File(xfile.path);
+        _removeImage = false;
+      });
+    }
   }
 
   Future<void> _pickDate() async {
@@ -55,14 +101,32 @@ class _EditKampanyeScreenState extends State<EditKampanyeScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _loading = true);
-
     try {
-      await _svc.updateCampaign(widget.campaign.id, {
+      String? newImageUrl = widget.campaign.imageUrl;
+
+      if (_removeImage) {
+        // Hapus gambar lama
+        if (widget.campaign.imageUrl != null) {
+          await _imgSvc.deleteByUrl(widget.campaign.imageUrl!);
+        }
+        newImageUrl = null;
+      } else if (_newImageFile != null) {
+        // Upload gambar baru, hapus yang lama
+        if (widget.campaign.imageUrl != null) {
+          await _imgSvc.deleteByUrl(widget.campaign.imageUrl!);
+        }
+        newImageUrl = await _imgSvc.uploadCampaignImage(_newImageFile!);
+      }
+
+      final fields = <String, dynamic>{
         'deskripsi': _deskripsiCtrl.text.trim(),
         'batasTanggal': Timestamp.fromDate(_batasTanggal),
-      });
+        'imageUrl': newImageUrl,
+      };
+      if (newImageUrl == null) fields.remove('imageUrl');
+
+      await _svc.updateCampaign(widget.campaign.id, fields);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -110,6 +174,10 @@ class _EditKampanyeScreenState extends State<EditKampanyeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ── Preview / Picker Gambar ────────────────────────────
+              _buildImagePicker(),
+              const SizedBox(height: 24),
+
               // Campaign title (read-only info)
               Container(
                 width: double.infinity,
@@ -259,4 +327,83 @@ class _EditKampanyeScreenState extends State<EditKampanyeScreen> {
       ),
     );
   }
+  Widget _buildImagePicker() {
+    // Prioritas tampilan: gambar baru > gambar lama > placeholder
+    Widget content;
+    final hasExisting =
+        widget.campaign.imageUrl != null && !_removeImage && _newImageFile == null;
+    final hasNew = _newImageFile != null;
+
+    if (hasNew) {
+      content = Stack(fit: StackFit.expand, children: [
+        Image.file(_newImageFile!, fit: BoxFit.cover),
+        Align(
+          alignment: Alignment.topRight,
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: _imgActionBtn(Icons.edit, _pickImage),
+          ),
+        ),
+      ]);
+    } else if (hasExisting) {
+      content = Stack(fit: StackFit.expand, children: [
+        Image.network(widget.campaign.imageUrl!, fit: BoxFit.cover),
+        Align(
+          alignment: Alignment.topRight,
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              _imgActionBtn(Icons.edit, _pickImage),
+              const SizedBox(width: 6),
+              _imgActionBtn(Icons.delete,
+                  () => setState(() => _removeImage = true), color: Colors.red),
+            ]),
+          ),
+        ),
+      ]);
+    } else {
+      content = GestureDetector(
+        onTap: _pickImage,
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          const Icon(Icons.add_photo_alternate_outlined,
+              size: 48, color: Color(0xFF1D9E75)),
+          const SizedBox(height: 8),
+          Text(
+            _removeImage ? 'Gambar dihapus. Tap untuk tambah baru' : 'Tambah Foto (opsional)',
+            style: const TextStyle(color: Color(0xFF1D9E75), fontSize: 13),
+          ),
+        ]),
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: GestureDetector(
+        onTap: (!hasExisting && !hasNew) ? _pickImage : null,
+        child: Container(
+          height: 180,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE1F5EE),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+                color: const Color(0xFF1D9E75).withValues(alpha: 0.4),
+                width: 1.5),
+          ),
+          child: content,
+        ),
+      ),
+    );
+  }
+
+  Widget _imgActionBtn(IconData icon, VoidCallback onTap,
+      {Color color = Colors.white}) =>
+      GestureDetector(
+        onTap: onTap,
+        child: CircleAvatar(
+          radius: 16,
+          backgroundColor: Colors.black.withValues(alpha: 0.5),
+          child: Icon(icon, size: 16, color: color),
+        ),
+      );
 }

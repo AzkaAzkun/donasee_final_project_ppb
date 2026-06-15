@@ -1,0 +1,12 @@
+{
+  "name": "fcm-backend",
+  "version": "1.0.0",
+  "description": "Backend test untuk kirim push notification via Firebase Admin SDK (FCM HTTP v1)",
+  "main": "send-notification.js",
+  "scripts": {
+    "send": "node send-notification.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.0"
+  }
+}

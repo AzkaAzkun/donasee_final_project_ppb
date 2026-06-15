@@ -67,7 +67,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
       }
       
       if (user != null && !kIsWeb) {
-        await NotificationService().initAndSaveToken(user.uid);
+        await NotificationService().saveTokenForUser(user.uid);
       }
 
       if (mounted) {

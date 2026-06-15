@@ -27,6 +27,22 @@ class AllocationService {
         );
   }
 
+  // Untuk tab "Kabar Baik" filtered by admin
+  Stream<List<AllocationModel>> getAllocationsByAdminStream(String adminId) {
+    return _col
+        .where('adminId', isEqualTo: adminId)
+        .snapshots()
+        .map(
+          (s) {
+            final list = s.docs
+                .map((d) => AllocationModel.fromFirestore(d.data(), d.id))
+                .toList();
+            list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            return list;
+          },
+        );
+  }
+
   // Untuk tab "Kabar Baik" global
   Stream<List<AllocationModel>> getAllAllocationsStream() {
     return _col

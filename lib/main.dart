@@ -5,7 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'firebase_options.dart';
 import 'services/auth_service.dart';
-import 'screens/auth/auth_wrapper.dart';
+import 'screens/auth/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,10 +32,18 @@ class MyApp extends StatelessWidget {
         title: 'Donasee App',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1D9E75)),
           useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF0050CB),
+            primary: const Color(0xFF0050CB),
+            secondary: const Color(0xFF006B5F),
+            tertiary: const Color(0xFF00682C),
+            error: const Color(0xFFBA1A1A),
+            surface: const Color(0xFFF7F9FB),
+          ),
+          scaffoldBackgroundColor: const Color(0xFFF7F9FB),
         ),
-        home: const AuthWrapper(),
+        home: const SplashScreen(),
       ),
     );
   }

@@ -10,6 +10,7 @@ class AllocationModel {
   final String adminId;
   final String adminNama;
   final DateTime createdAt;
+  final String? buktiAlokasiUrl; // NEW: URL bukti alokasi dana (Supabase Storage)
 
   AllocationModel({
     required this.id,
@@ -21,6 +22,7 @@ class AllocationModel {
     required this.adminId,
     required this.adminNama,
     required this.createdAt,
+    this.buktiAlokasiUrl,
   });
 
   factory AllocationModel.fromFirestore(Map<String, dynamic> d, String id) {
@@ -35,6 +37,7 @@ class AllocationModel {
       adminId: _readString(data['adminId']),
       adminNama: _readString(data['adminNama']),
       createdAt: _readDateTime(data['createdAt']),
+      buktiAlokasiUrl: data['buktiAlokasiUrl'] as String?,
     );
   }
 
@@ -68,5 +71,6 @@ class AllocationModel {
     'adminId': adminId,
     'adminNama': adminNama,
     'createdAt': Timestamp.fromDate(createdAt),
+    if (buktiAlokasiUrl != null) 'buktiAlokasiUrl': buktiAlokasiUrl,
   };
 }

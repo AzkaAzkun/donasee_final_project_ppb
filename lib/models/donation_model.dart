@@ -17,6 +17,8 @@ class DonationModel {
   final String status;
   final String? buktiFotoUrl;
   final DateTime createdAt;
+  final String? pesan; // NEW: pesan dukungan
+  final bool isAnonymous; // NEW: sembunyikan nama
 
   DonationModel({
     required this.id,
@@ -29,6 +31,8 @@ class DonationModel {
     required this.status,
     this.buktiFotoUrl,
     required this.createdAt,
+    this.pesan,
+    this.isAnonymous = false,
   });
 
   bool get isPending => status == DonationStatus.pending;
@@ -46,6 +50,8 @@ class DonationModel {
       status: d['status'] ?? DonationStatus.pending,
       buktiFotoUrl: d['buktiFotoUrl'],
       createdAt: (d['createdAt'] as Timestamp).toDate(),
+      pesan: d['pesan'] as String?,
+      isAnonymous: d['isAnonymous'] ?? false,
     );
   }
 
@@ -59,5 +65,7 @@ class DonationModel {
     'status': status,
     if (buktiFotoUrl != null) 'buktiFotoUrl': buktiFotoUrl,
     'createdAt': Timestamp.fromDate(createdAt),
+    if (pesan != null) 'pesan': pesan,
+    'isAnonymous': isAnonymous,
   };
 }

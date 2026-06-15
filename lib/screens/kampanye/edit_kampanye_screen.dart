@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
@@ -6,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../services/campaign_service.dart';
 import '../../services/image_upload_service.dart';
 import '../../models/campaign_model.dart';
+import 'form_kampanye_screen.dart'; // import to reuse DashedRectPainter
 
 class EditKampanyeScreen extends StatefulWidget {
   final CampaignModel campaign;
@@ -24,6 +26,8 @@ class _EditKampanyeScreenState extends State<EditKampanyeScreen> {
 
   late DateTime _batasTanggal;
   File? _newImageFile;       // gambar baru yang dipilih
+  Uint8List? _newImageBytes;
+  String? _newImageExt;
   bool _removeImage = false; // flag hapus gambar saat ini
   bool _loading = false;
 
@@ -49,13 +53,13 @@ class _EditKampanyeScreenState extends State<EditKampanyeScreen> {
                   borderRadius: BorderRadius.circular(4))),
           const SizedBox(height: 16),
           ListTile(
-            leading: const Icon(Icons.camera_alt, color: Color(0xFF1D9E75)),
-            title: const Text('Kamera'),
+            leading: const Icon(Icons.camera_alt_outlined, color: Color(0xFF0050CB)),
+            title: const Text('Kamera', style: TextStyle(fontFamily: 'Inter')),
             onTap: () => Navigator.pop(context, ImageSource.camera),
           ),
           ListTile(
-            leading: const Icon(Icons.photo_library, color: Color(0xFF1D9E75)),
-            title: const Text('Galeri'),
+            leading: const Icon(Icons.photo_library_outlined, color: Color(0xFF0050CB)),
+            title: const Text('Galeri', style: TextStyle(fontFamily: 'Inter')),
             onTap: () => Navigator.pop(context, ImageSource.gallery),
           ),
           const SizedBox(height: 8),
@@ -66,11 +70,20 @@ class _EditKampanyeScreenState extends State<EditKampanyeScreen> {
     final xfile = await _picker.pickImage(
         source: source, imageQuality: 75, maxWidth: 1024);
     if (xfile != null) {
-      setState(() {
-        _newImageFile = File(xfile.path);
-        _removeImage = false;
-      });
-    }
+       final bytes = await xfile.readAsBytes();
+       String ext = 'jpg';
+       if (xfile.name.contains('.')) {
+         ext = xfile.name.split('.').last.toLowerCase();
+       }
+       setState(() {
+         _newImageBytes = bytes;
+         _newImageExt = ext;
+         _removeImage = false;
+         if (!kIsWeb) {
+           _newImageFile = File(xfile.path);
+         }
+       });
+     }
   }
 
   Future<void> _pickDate() async {
@@ -84,7 +97,7 @@ class _EditKampanyeScreenState extends State<EditKampanyeScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF1D9E75),
+              primary: Color(0xFF0050CB),
               onPrimary: Colors.white,
               surface: Colors.white,
               onSurface: Colors.black87,
@@ -106,17 +119,19 @@ class _EditKampanyeScreenState extends State<EditKampanyeScreen> {
       String? newImageUrl = widget.campaign.imageUrl;
 
       if (_removeImage) {
-        // Hapus gambar lama
         if (widget.campaign.imageUrl != null) {
           await _imgSvc.deleteByUrl(widget.campaign.imageUrl!);
         }
         newImageUrl = null;
-      } else if (_newImageFile != null) {
-        // Upload gambar baru, hapus yang lama
+      } else if (_newImageBytes != null) {
         if (widget.campaign.imageUrl != null) {
           await _imgSvc.deleteByUrl(widget.campaign.imageUrl!);
         }
-        newImageUrl = await _imgSvc.uploadCampaignImage(_newImageFile!);
+        if (kIsWeb) {
+          newImageUrl = await _imgSvc.uploadCampaignImageBytes(_newImageBytes!, _newImageExt ?? 'jpg');
+        } else if (_newImageFile != null) {
+          newImageUrl = await _imgSvc.uploadCampaignImage(_newImageFile!);
+        }
       }
 
       final fields = <String, dynamic>{
@@ -132,7 +147,8 @@ class _EditKampanyeScreenState extends State<EditKampanyeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Kampanye berhasil diperbarui!'),
-            backgroundColor: Color(0xFF1D9E75),
+            backgroundColor: Color(0xFF00682C),
+            behavior: SnackBarBehavior.floating,
           ),
         );
         Navigator.pop(context);
@@ -142,7 +158,8 @@ class _EditKampanyeScreenState extends State<EditKampanyeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Gagal memperbarui kampanye: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: const Color(0xFFBA1A1A),
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -162,181 +179,231 @@ class _EditKampanyeScreenState extends State<EditKampanyeScreen> {
     final dateFmt = DateFormat('d MMMM yyyy', 'id_ID');
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF7F9FB),
       appBar: AppBar(
-        title: const Text('Edit Kampanye'),
-        backgroundColor: const Color(0xFF1D9E75),
-        foregroundColor: Colors.white,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Preview / Picker Gambar ────────────────────────────
-              _buildImagePicker(),
-              const SizedBox(height: 24),
-
-              // Campaign title (read-only info)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF5F5F5),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade200),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Kampanye',
-                        style: TextStyle(fontSize: 11, color: Colors.grey)),
-                    const SizedBox(height: 4),
-                    Text(widget.campaign.judul,
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 4),
-                    Text(widget.campaign.organisasiNama,
-                        style: const TextStyle(
-                            fontSize: 12, color: Color(0xFF0F6E56))),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Deskripsi
-              const Text('Deskripsi',
-                  style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF333333))),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _deskripsiCtrl,
-                maxLines: 5,
-                decoration: InputDecoration(
-                  hintText: 'Perbarui deskripsi kampanye...',
-                  prefixIcon: const Padding(
-                    padding: EdgeInsets.only(bottom: 80),
-                    child: Icon(Icons.description, color: Color(0xFF1D9E75)),
-                  ),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide:
-                        const BorderSide(color: Color(0xFF1D9E75), width: 2),
-                  ),
-                ),
-                validator: (v) => (v == null || v.trim().isEmpty)
-                    ? 'Deskripsi wajib diisi'
-                    : null,
-              ),
-              const SizedBox(height: 20),
-
-              // Batas Tanggal
-              const Text('Perpanjang Batas Tanggal',
-                  style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF333333))),
-              const SizedBox(height: 8),
-              InkWell(
-                onTap: _pickDate,
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade400),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.calendar_today,
-                          color: Color(0xFF1D9E75)),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          dateFmt.format(_batasTanggal),
-                          style: const TextStyle(
-                              fontSize: 15, color: Colors.black87),
-                        ),
-                      ),
-                      const Icon(Icons.arrow_drop_down, color: Colors.grey),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Info perubahan tanggal
-              if (_batasTanggal != widget.campaign.batasTanggal)
-                Container(
-                  margin: const EdgeInsets.only(top: 8),
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF8E1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.info_outline,
-                          size: 16, color: Color(0xFF633806)),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Tanggal sebelumnya: ${dateFmt.format(widget.campaign.batasTanggal)}',
-                          style: const TextStyle(
-                              fontSize: 12, color: Color(0xFF633806)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              const SizedBox(height: 32),
-
-              // Submit button
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _loading ? null : _submit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1D9E75),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    elevation: 2,
-                  ),
-                  child: _loading
-                      ? const SizedBox(
-                          height: 22,
-                          width: 22,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Text('Simpan Perubahan',
-                          style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w600)),
-                ),
-              ),
-            ],
+        backgroundColor: const Color(0xFFF7F9FB),
+        elevation: 0.5,
+        scrolledUnderElevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF0050CB)),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Edit Kampanye',
+          style: TextStyle(
+            color: Color(0xFF0050CB),
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            fontFamily: 'Lexend',
           ),
         ),
       ),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Preview / Picker Gambar
+                    _buildImagePicker(),
+                    const SizedBox(height: 24),
+
+                    // Campaign title (read-only info card)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFFC2C6D8).withValues(alpha: 0.5)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.02),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'KAMPANYE',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Color(0xFF727687),
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.1,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            widget.campaign.judul,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF191C1E),
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            widget.campaign.organisasiNama,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF006B5F),
+                              fontWeight: FontWeight.w500,
+                              fontFamily: 'Inter',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Deskripsi
+                    _label('Deskripsi'),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _deskripsiCtrl,
+                      maxLines: 6,
+                      style: const TextStyle(fontSize: 15, fontFamily: 'Inter'),
+                      decoration: _inputDec(
+                        hint: 'Perbarui deskripsi kampanye...',
+                        icon: Icons.description_rounded,
+                        alignLabel: true,
+                      ),
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'Deskripsi wajib diisi'
+                          : null,
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Batas Tanggal
+                    _label('Perpanjang Batas Tanggal'),
+                    const SizedBox(height: 8),
+                    InkWell(
+                      onTap: _pickDate,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border.all(color: const Color(0xFFC2C6D8)),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.calendar_today_rounded, color: Color(0xFF424656), size: 20),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                dateFmt.format(_batasTanggal),
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontFamily: 'Inter',
+                                  color: Color(0xFF191C1E),
+                                ),
+                              ),
+                            ),
+                            const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF727687)),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Info perubahan tanggal
+                    if (_batasTanggal != widget.campaign.batasTanggal)
+                      Container(
+                        margin: const EdgeInsets.only(top: 12),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFDAD6).withValues(alpha: 0.2), // bg-error-container/20
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFFFDAD6).withValues(alpha: 0.5)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.info_outline_rounded, size: 18, color: Color(0xFFBA1A1A)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Batas tanggal sebelumnya: ${dateFmt.format(widget.campaign.batasTanggal)}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFFBA1A1A),
+                                  fontFamily: 'Inter',
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Persistent Bottom Action Bar
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(
+                top: BorderSide(
+                  color: const Color(0xFFC2C6D8).withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+            ),
+            child: SafeArea(
+              top: false,
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator(color: Color(0xFF0050CB)))
+                  : ElevatedButton.icon(
+                      onPressed: _submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0050CB), // bg-primary
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(52),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(9999), // rounded-full
+                        ),
+                        elevation: 2,
+                      ),
+                      icon: const Icon(Icons.check_circle_outline_rounded, size: 20),
+                      label: const Text(
+                        'Simpan Perubahan',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Inter',
+                        ),
+                      ),
+                    ),
+            ),
+          ),
+        ],
+      ),
     );
   }
-  Widget _buildImagePicker() {
-    // Prioritas tampilan: gambar baru > gambar lama > placeholder
-    Widget content;
-    final hasExisting =
-        widget.campaign.imageUrl != null && !_removeImage && _newImageFile == null;
-    final hasNew = _newImageFile != null;
 
+  Widget _buildImagePicker() {
+    final hasExisting = widget.campaign.imageUrl != null && !_removeImage && _newImageBytes == null;
+    final hasNew = _newImageBytes != null;
+
+    Widget content;
     if (hasNew) {
       content = Stack(fit: StackFit.expand, children: [
-        Image.file(_newImageFile!, fit: BoxFit.cover),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Image.memory(_newImageBytes!, fit: BoxFit.cover),
+        ),
         Align(
           alignment: Alignment.topRight,
           child: Padding(
@@ -347,63 +414,111 @@ class _EditKampanyeScreenState extends State<EditKampanyeScreen> {
       ]);
     } else if (hasExisting) {
       content = Stack(fit: StackFit.expand, children: [
-        Image.network(widget.campaign.imageUrl!, fit: BoxFit.cover),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Image.network(widget.campaign.imageUrl!, fit: BoxFit.cover),
+        ),
         Align(
           alignment: Alignment.topRight,
           child: Padding(
             padding: const EdgeInsets.all(8),
             child: Row(mainAxisSize: MainAxisSize.min, children: [
               _imgActionBtn(Icons.edit, _pickImage),
-              const SizedBox(width: 6),
-              _imgActionBtn(Icons.delete,
-                  () => setState(() => _removeImage = true), color: Colors.red),
+              const SizedBox(width: 8),
+              _imgActionBtn(Icons.delete, () => setState(() => _removeImage = true), color: Colors.red),
             ]),
           ),
         ),
       ]);
     } else {
-      content = GestureDetector(
-        onTap: _pickImage,
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          const Icon(Icons.add_photo_alternate_outlined,
-              size: 48, color: Color(0xFF1D9E75)),
-          const SizedBox(height: 8),
-          Text(
-            _removeImage ? 'Gambar dihapus. Tap untuk tambah baru' : 'Tambah Foto (opsional)',
-            style: const TextStyle(color: Color(0xFF1D9E75), fontSize: 13),
+      content = CustomPaint(
+        painter: DashedRectPainter(
+          color: const Color(0xFF0050CB).withValues(alpha: 0.3),
+          gap: 6,
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFF6DF5E1).withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(24),
           ),
-        ]),
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            const Icon(Icons.add_photo_alternate_outlined, size: 48, color: Color(0xFF0050CB)),
+            const SizedBox(height: 8),
+            Text(
+              _removeImage ? 'Gambar dihapus. Tap untuk tambah baru' : 'Tambah Foto (opsional)',
+              style: const TextStyle(color: Color(0xFF0050CB), fontSize: 13, fontWeight: FontWeight.bold),
+            ),
+          ]),
+        ),
       );
     }
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: GestureDetector(
-        onTap: (!hasExisting && !hasNew) ? _pickImage : null,
-        child: Container(
-          height: 180,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: const Color(0xFFE1F5EE),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-                color: const Color(0xFF1D9E75).withValues(alpha: 0.4),
-                width: 1.5),
-          ),
-          child: content,
-        ),
+    return Container(
+      height: 180,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
       ),
+      child: content,
     );
   }
 
-  Widget _imgActionBtn(IconData icon, VoidCallback onTap,
-      {Color color = Colors.white}) =>
+  Widget _imgActionBtn(IconData icon, VoidCallback onTap, {Color color = Colors.white}) =>
       GestureDetector(
         onTap: onTap,
         child: CircleAvatar(
           radius: 16,
           backgroundColor: Colors.black.withValues(alpha: 0.5),
           child: Icon(icon, size: 16, color: color),
+        ),
+      );
+
+  Widget _label(String text) => Padding(
+        padding: const EdgeInsets.only(left: 4),
+        child: Text(
+          text,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF191C1E),
+            fontFamily: 'Inter',
+          ),
+        ),
+      );
+
+  InputDecoration _inputDec({
+    required String hint,
+    required IconData icon,
+    String? prefix,
+    bool alignLabel = false,
+  }) =>
+      InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(color: Color(0xFF727687), fontSize: 15),
+        prefixText: prefix,
+        prefixStyle: const TextStyle(color: Color(0xFF191C1E), fontSize: 15, fontWeight: FontWeight.bold),
+        prefixIcon: Padding(
+          padding: alignLabel ? const EdgeInsets.only(bottom: 110) : EdgeInsets.zero,
+          child: Icon(icon, color: const Color(0xFF424656), size: 20),
+        ),
+        fillColor: Colors.white,
+        filled: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFFC2C6D8)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFF0050CB), width: 2),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFFBA1A1A)),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Color(0xFFBA1A1A), width: 2),
         ),
       );
 }

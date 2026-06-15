@@ -12,6 +12,7 @@ class CampaignModel {
   final String status;
   final DateTime createdAt;
   final String? imageUrl; // opsional — URL dari Supabase Storage
+  final String kategori; // NEW: kategori kampanye (Pendidikan, Pangan, Renovasi, Kesehatan, Lainnya)
 
   CampaignModel({
     required this.id,
@@ -25,6 +26,7 @@ class CampaignModel {
     required this.status,
     required this.createdAt,
     this.imageUrl,
+    this.kategori = 'Lainnya',
   });
 
   double get progressPersen =>
@@ -47,6 +49,7 @@ class CampaignModel {
       status: d['status'] ?? 'aktif',
       createdAt: (d['createdAt'] as Timestamp).toDate(),
       imageUrl: d['imageUrl'] as String?,
+      kategori: d['kategori'] ?? 'Lainnya',
     );
   }
 
@@ -60,6 +63,7 @@ class CampaignModel {
     'batasTanggal': Timestamp.fromDate(batasTanggal),
     'status': status,
     'createdAt': Timestamp.fromDate(createdAt),
+    'kategori': kategori,
     if (imageUrl != null) 'imageUrl': imageUrl,
   };
 }

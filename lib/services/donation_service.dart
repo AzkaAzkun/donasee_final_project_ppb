@@ -29,6 +29,11 @@ class DonationService {
         );
   }
 
+  Stream<DonationModel?> getDonationByIdStream(String id) {
+    return _col.doc(id).snapshots().map((s) =>
+        s.exists && s.data() != null ? DonationModel.fromFirestore(s.data()!, s.id) : null);
+  }
+
   Stream<List<DonationModel>> getDonationsByCampaignStream(String campaignId) {
     return _col
         .where('kampanyeId', isEqualTo: campaignId)

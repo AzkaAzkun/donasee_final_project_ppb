@@ -6,19 +6,29 @@ import 'package:donasee_final_project_ppb/services/auth_service.dart';
 import 'package:flutter/material.dart';
 // import 'package:provider/provider.dart';
 import 'jelajah_screen.dart';
-import '../admin/kelola_donasi_screen.dart';
+import '../admin/manajemen_kampanye_screen.dart';
 
 class MainNavigation extends StatefulWidget {
+  static final GlobalKey<MainNavigationState> navigationKey = GlobalKey<MainNavigationState>();
+
   const MainNavigation({super.key});
 
   @override
-  State<MainNavigation> createState() => _MainNavigationState();
+  State<MainNavigation> createState() => MainNavigationState();
 }
 
-class _MainNavigationState extends State<MainNavigation> {
+class MainNavigationState extends State<MainNavigation> {
   int _idx = 0;
   UserModel? _currentUser;
   bool _loadingUser = true;
+
+  void setIndex(int index) {
+    if (_cachedScreens != null && index >= 0 && index < _cachedScreens!.length) {
+      setState(() {
+        _idx = index;
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -26,50 +36,48 @@ class _MainNavigationState extends State<MainNavigation> {
     _loadUser();
   }
 
+  List<Widget>? _cachedScreens;
+
   Future<void> _loadUser() async {
     final user = await AuthService().getCurrentUserModel();
     if (mounted) {
       setState(() {
         _currentUser = user;
         _loadingUser = false;
+        if (user != null) {
+          final screens = user.isAdmin
+              ? [
+                  const ManajemenKampanyeScreen(isRootTab: true),
+                  const KabarBaikScreen(),
+                  ProfilScreen(user: user),
+                ]
+              : [
+                  JelajahScreen(user: user),
+                  DonasikuScreen(user: user),
+                  const KabarBaikScreen(),
+                  ProfilScreen(user: user),
+                ];
+          _cachedScreens = screens;
+          if (_idx >= screens.length) {
+            _idx = 0;
+          }
+        }
       });
     }
-  }
-
-  List<Widget> get _screens {
-    if (_currentUser!.isAdmin) {
-      return [
-        const JelajahScreen(),
-        const KelolaDonasiScreen(), // ← admin dapat ini
-        const KabarBaikScreen(),
-        ProfilScreen(user: _currentUser!),
-      ];
-    }
-    return [
-      const JelajahScreen(),
-      const DonasikuScreen(), // ← donatur dapat ini
-      const KabarBaikScreen(),
-      ProfilScreen(user: _currentUser!),
-    ];
   }
 
   List<BottomNavigationBarItem> get _navItems {
     if (_currentUser?.isAdmin == true) {
       return const [
         BottomNavigationBarItem(
-          icon: Icon(Icons.explore_outlined),
-          activeIcon: Icon(Icons.explore),
-          label: 'Jelajah',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.task_alt_outlined),
-          activeIcon: Icon(Icons.task_alt),
-          label: 'Verifikasi', // label beda untuk admin
+          icon: Icon(Icons.volunteer_activism_outlined),
+          activeIcon: Icon(Icons.volunteer_activism),
+          label: 'Donasi',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.newspaper_outlined),
           activeIcon: Icon(Icons.newspaper),
-          label: 'Kabar Baik',
+          label: 'Manajemen Kabar Baik',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.account_circle_outlined),
@@ -109,11 +117,11 @@ class _MainNavigationState extends State<MainNavigation> {
     }
 
     return Scaffold(
-      body: IndexedStack(index: _idx, children: _screens),
+      body: IndexedStack(index: _idx, children: _cachedScreens ?? []),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _idx,
         onTap: (i) => setState(() => _idx = i),
-        selectedItemColor: const Color(0xFF1D9E75),
+        selectedItemColor: const Color(0xFF0050CB),
         unselectedItemColor: Colors.grey,
         type: BottomNavigationBarType.fixed, // wajib jika tab >= 4
         items: _navItems,

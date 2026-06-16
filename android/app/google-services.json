@@ -9,7 +9,11 @@
       "client_info": {
         "mobilesdk_app_id": "1:791734182066:android:fc0e7c61c4caf2ef1f29ab",
         "android_client_info": {
-          "package_name": "com.example.donasee_final_project_ppb"
+          "package_name": "com.example.donasee_final_project_ppb",
+          "certificate_hash": [
+            "46:0e:6e:6b:3d:22:61:48:85:1a:9a:be:5d:ba:f9:0d:13:b5:e5:48",
+            "cb:ea:b8:2a:a6:95:01:90:a0:db:1d:57:97:1d:98:8a:f0:45:36:bb"
+          ]
         }
       },
       "oauth_client": [],

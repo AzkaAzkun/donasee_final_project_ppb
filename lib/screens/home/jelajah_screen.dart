@@ -23,6 +23,7 @@ class _JelajahScreenState extends State<JelajahScreen> {
   final _svc = CampaignService();
   UserModel? _user;
   bool _loadingUser = true;
+  late Stream<List<CampaignModel>> _campaignsStream;
 
   _SortMode _sort = _SortMode.terbaru;
   bool _filterMilikSaya = false;
@@ -32,6 +33,7 @@ class _JelajahScreenState extends State<JelajahScreen> {
   @override
   void initState() {
     super.initState();
+    _campaignsStream = _svc.getCampaignsStream();
     if (widget.user != null) {
       _user = widget.user;
       _loadingUser = false;
@@ -63,10 +65,11 @@ class _JelajahScreenState extends State<JelajahScreen> {
     }
 
     if (_searchQuery.isNotEmpty) {
-      final query = _searchQuery.toLowerCase();
+      final queryParts = _searchQuery.toLowerCase().split(' ').where((s) => s.isNotEmpty).toList();
       list = list.where((c) {
-        return c.judul.toLowerCase().contains(query) ||
-            c.organisasiNama.toLowerCase().contains(query);
+        final judul = c.judul.toLowerCase();
+        final org = c.organisasiNama.toLowerCase();
+        return queryParts.every((part) => judul.contains(part) || org.contains(part));
       }).toList();
     }
 
@@ -217,7 +220,7 @@ class _JelajahScreenState extends State<JelajahScreen> {
       backgroundColor: const Color(0xFFF7F9FB),
       body: SafeArea(
         child: StreamBuilder<List<CampaignModel>>(
-          stream: _svc.getCampaignsStream(),
+          stream: _campaignsStream,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());

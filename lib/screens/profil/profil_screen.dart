@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/image_upload_service.dart';
-import '../auth/login_screen.dart';
+import '../auth/auth_wrapper.dart';
 import '../home/main_navigation.dart';
 import 'detail_profil_screen.dart';
 import '../admin/manajemen_kampanye_screen.dart';
@@ -51,7 +51,7 @@ class ProfilScreen extends StatelessWidget {
       if (context.mounted) {
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          MaterialPageRoute(builder: (_) => const AuthWrapper()),
           (_) => false,
         );
       }

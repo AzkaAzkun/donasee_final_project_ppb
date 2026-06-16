@@ -453,13 +453,16 @@ class _EditKampanyeScreenState extends State<EditKampanyeScreen> {
       );
     }
 
-    return Container(
-      height: 180,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
+    return GestureDetector(
+      onTap: _pickImage,
+      child: Container(
+        height: 180,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: content,
       ),
-      child: content,
     );
   }
 

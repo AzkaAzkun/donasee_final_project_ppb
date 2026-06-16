@@ -16,13 +16,22 @@ class ManajemenKampanyeScreen extends StatefulWidget {
 
 class _ManajemenKampanyeScreenState extends State<ManajemenKampanyeScreen> {
   String _searchQuery = '';
+  String _filterStatus = 'semua';
   final _searchCtrl = TextEditingController();
+  late Stream<List<CampaignModel>> _campaignsStream;
 
   final _fmt = NumberFormat.currency(
     locale: 'id_ID',
     symbol: 'Rp ',
     decimalDigits: 0,
   );
+
+  @override
+  void initState() {
+    super.initState();
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+    _campaignsStream = _streamMyCampaigns(currentUserId);
+  }
 
   @override
   void dispose() {
@@ -81,7 +90,7 @@ class _ManajemenKampanyeScreenState extends State<ManajemenKampanyeScreen> {
         ),
       ),
       body: StreamBuilder<List<CampaignModel>>(
-        stream: _streamMyCampaigns(currentUserId),
+        stream: _campaignsStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator(color: Color(0xFF0050CB)));
@@ -107,10 +116,22 @@ class _ManajemenKampanyeScreenState extends State<ManajemenKampanyeScreen> {
           }
 
           // Filtering by search query locally
+          final queryParts = _searchQuery.toLowerCase().split(' ').where((s) => s.isNotEmpty).toList();
           final filteredCampaigns = campaigns.where((c) {
-            final q = _searchQuery.toLowerCase();
-            return c.judul.toLowerCase().contains(q) ||
-                c.kategori.toLowerCase().contains(q);
+            // Apply filter status
+            if (_filterStatus != 'semua' && _filterStatus != 'verifikasi') {
+              if (c.status != _filterStatus) return false;
+            } else if (_filterStatus == 'verifikasi') {
+              if (c.status == 'aktif' || c.status == 'selesai') return false;
+            }
+
+            // Apply search query
+            if (queryParts.isNotEmpty) {
+              final judul = c.judul.toLowerCase();
+              final kategori = c.kategori.toLowerCase();
+              return queryParts.every((part) => judul.contains(part) || kategori.contains(part));
+            }
+            return true;
           }).toList();
 
           return Column(
@@ -297,13 +318,9 @@ class _ManajemenKampanyeScreenState extends State<ManajemenKampanyeScreen> {
                               fontFamily: 'Lexend',
                             ),
                           ),
-                          TextButton.icon(
-                            onPressed: () {},
-                            icon: const Icon(Icons.tune_rounded, size: 18, color: Color(0xFF0050CB)),
-                            label: const Text(
-                              'Filter',
-                              style: TextStyle(color: Color(0xFF0050CB), fontSize: 14, fontWeight: FontWeight.bold),
-                            ),
+                          IconButton(
+                            icon: const Icon(Icons.tune_rounded, color: Color(0xFF0050CB)),
+                            onPressed: _showFilterBottomSheet,
                           ),
                         ],
                       ),
@@ -682,6 +699,118 @@ class _ManajemenKampanyeScreenState extends State<ManajemenKampanyeScreen> {
           style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.bold),
         ),
       ),
+    );
+  }
+
+  void _showFilterBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Container(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Filter Kampanye',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Status Kampanye:',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ChoiceChip(
+                        label: const Text('Semua'),
+                        selected: _filterStatus == 'semua',
+                        onSelected: (val) {
+                          if (val) {
+                            setState(() => _filterStatus = 'semua');
+                            setSheetState(() {});
+                          }
+                        },
+                      ),
+                      ChoiceChip(
+                        label: const Text('Aktif'),
+                        selected: _filterStatus == 'aktif',
+                        onSelected: (val) {
+                          if (val) {
+                            setState(() => _filterStatus = 'aktif');
+                            setSheetState(() {});
+                          }
+                        },
+                      ),
+                      ChoiceChip(
+                        label: const Text('Selesai'),
+                        selected: _filterStatus == 'selesai',
+                        onSelected: (val) {
+                          if (val) {
+                            setState(() => _filterStatus = 'selesai');
+                            setSheetState(() {});
+                          }
+                        },
+                      ),
+                      ChoiceChip(
+                        label: const Text('Pending'),
+                        selected: _filterStatus == 'verifikasi',
+                        onSelected: (val) {
+                          if (val) {
+                            setState(() => _filterStatus = 'verifikasi');
+                            setSheetState(() {});
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0050CB),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Terapkan',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

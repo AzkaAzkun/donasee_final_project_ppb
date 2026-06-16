@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.example.donasee_final_project_ppb"
-    compileSdk = flutter.compileSdkVersion
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

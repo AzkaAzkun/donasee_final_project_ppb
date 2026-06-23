@@ -50,7 +50,7 @@ admin.initializeApp({
 //   <token ada di sini>
 //   ========================================
 
-const FCM_TOKEN = "ISI_DENGAN_FCM_TOKEN_DARI_FLUTTER_DEBUG_CONSOLE";
+const FCM_TOKEN = "danozC1cR6izYeagQGeVQH:APA91bGwZT_AzgRt8L389V12XeFenDP1b2ByyJkhb4tBj5fAw-0lNrRXhNVU_0FlAiHLRZcUlpRSSnh9qpr00KA4PQn61ykEaYMURQJO_866xHi27iiXiHk";
 
 const message = {
   token: FCM_TOKEN,

@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:googleapis_auth/auth_io.dart' as auth;
 
 /// Top-level function untuk handle background/terminated messages.
 /// HARUS top-level (bukan method di dalam class).
@@ -26,7 +28,6 @@ class NotificationService {
 
   final _fcm = FirebaseMessaging.instance;
   final _db = FirebaseFirestore.instance;
-  static const _serverKey = 'YOUR_FCM_SERVER_KEY';
 
   // Plugin untuk notifikasi lokal (foreground)
   final FlutterLocalNotificationsPlugin _localNotifications =
@@ -218,17 +219,20 @@ class NotificationService {
     required String kampanyeJudul,
   }) async {
     try {
+      // Query semua donasi berhasil untuk kampanye ini
       final donations = await _db
           .collection('donations')
           .where('kampanyeId', isEqualTo: kampanyeId)
           .where('status', isEqualTo: 'berhasil')
           .get();
 
+      // Kumpulkan unique donatur IDs
       final donaturIds = donations.docs
           .map((doc) => doc.data()['donaturId'] as String?)
           .whereType<String>()
           .toSet();
 
+      // Kirim notifikasi ke setiap donatur
       for (final uid in donaturIds) {
         final userDoc = await _db.collection('users').doc(uid).get();
         final token = userDoc.data()?['fcmToken'] as String?;
@@ -242,9 +246,7 @@ class NotificationService {
       }
 
       if (kDebugMode) {
-        print('📢 Notifikasi alokasi untuk kampanye "$kampanyeJudul"');
-        print('   Jumlah donatur: ${donaturIds.length}');
-        print('   ✅ FCM request sudah dikirim via Legacy API.');
+        print('📢 Notifikasi alokasi terkirim ke ${donaturIds.length} donatur pada kampanye "$kampanyeJudul".');
       }
     } catch (e) {
       if (kDebugMode) {
@@ -253,29 +255,70 @@ class NotificationService {
     }
   }
 
+  Future<String> _getAccessToken() async {
+    final jsonString = await rootBundle.loadString('assets/serviceAccountKey.json');
+    final accountCredentials = auth.ServiceAccountCredentials.fromJson(jsonString);
+    final scopes = ['https://www.googleapis.com/auth/firebase.messaging'];
+    final client = await auth.clientViaServiceAccount(accountCredentials, scopes);
+    final token = client.credentials.accessToken.data;
+    client.close();
+    return token;
+  }
+
   Future<void> _sendFcmMessage({
     required String token,
     required String title,
     required String body,
   }) async {
-    if (_serverKey == 'YOUR_FCM_SERVER_KEY') {
-      if (kDebugMode) {
-        print('⚠️ Server key FCM belum diisi, pengiriman notifikasi dilewati.');
-      }
-      return;
-    }
+    try {
+      final String accessToken = await _getAccessToken();
+      final jsonString = await rootBundle.loadString('assets/serviceAccountKey.json');
+      final Map<String, dynamic> serviceAccount = jsonDecode(jsonString);
+      final String projectId = serviceAccount['project_id'];
 
-    await http.post(
-      Uri.parse('https://fcm.googleapis.com/fcm/send'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'key=$_serverKey',
-      },
-      body: jsonEncode({
-        'to': token,
-        'notification': {'title': title, 'body': body},
-        'data': {'screen': 'kabar_baik'},
-      }),
-    );
+      final String endpoint = 'https://fcm.googleapis.com/v1/projects/$projectId/messages:send';
+
+      final Map<String, dynamic> message = {
+        'message': {
+          'token': token,
+          'notification': {
+            'title': title,
+            'body': body,
+          },
+          'android': {
+            'priority': 'high',
+            'notification': {
+              'channel_id': 'high_importance_channel',
+              'default_sound': true,
+            },
+          },
+          'data': {
+            'screen': 'kabar_baik',
+            'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+          },
+        }
+      };
+
+      final response = await http.post(
+        Uri.parse(endpoint),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        },
+        body: jsonEncode(message),
+      );
+
+      if (kDebugMode) {
+        if (response.statusCode == 200) {
+          print('✅ Berhasil mengirim notifikasi via HTTP v1 API');
+        } else {
+          print('❌ Gagal mengirim notifikasi: ${response.body}');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Exception saat mengirim notifikasi: $e');
+      }
+    }
   }
 }

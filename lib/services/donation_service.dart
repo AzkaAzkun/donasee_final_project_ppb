@@ -4,6 +4,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:path/path.dart' as p;
 import '../models/donation_model.dart';
 import 'campaign_service.dart';
+import 'notification_service.dart';
+
 
 class DonationService {
   final _col = FirebaseFirestore.instance.collection('donations');
@@ -17,15 +19,42 @@ class DonationService {
     await _col.add(d.toFirestore());
   }
 
+  Future<void> createDonationWithId(DonationModel d) async {
+    await _col.doc(d.id).set(d.toFirestore());
+  }
+
+  Future<String> uploadBuktiDirect(String donationId, XFile file) async {
+    final ext = p.extension(file.name).toLowerCase(); // .jpg / .png
+    final fileName = '${DateTime.now().millisecondsSinceEpoch}$ext';
+    final filePath = 'bukti/$donationId/$fileName';
+    final bytes = await file.readAsBytes();
+
+    await _supabase.storage
+        .from(_bucket)
+        .uploadBinary(
+          filePath,
+          bytes,
+          fileOptions: FileOptions(
+            contentType: ext == '.png' ? 'image/png' : 'image/jpeg',
+            upsert: false,
+          ),
+        );
+
+    return _supabase.storage.from(_bucket).getPublicUrl(filePath);
+  }
+
   Stream<List<DonationModel>> getDonationsByUserStream(String uid) {
     return _col
         .where('donaturId', isEqualTo: uid)
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map(
-          (s) => s.docs
-              .map((d) => DonationModel.fromFirestore(d.data(), d.id))
-              .toList(),
+          (s) {
+            final list = s.docs
+                .map((d) => DonationModel.fromFirestore(d.data(), d.id))
+                .toList();
+            list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            return list;
+          },
         );
   }
 
@@ -37,12 +66,15 @@ class DonationService {
   Stream<List<DonationModel>> getDonationsByCampaignStream(String campaignId) {
     return _col
         .where('kampanyeId', isEqualTo: campaignId)
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map(
-          (s) => s.docs
-              .map((d) => DonationModel.fromFirestore(d.data(), d.id))
-              .toList(),
+          (s) {
+            final list = s.docs
+                .map((d) => DonationModel.fromFirestore(d.data(), d.id))
+                .toList();
+            list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            return list;
+          },
         );
   }
 
@@ -81,7 +113,6 @@ class DonationService {
 
       return true;
     } catch (e) {
-      print('Error uploading image: $e');
       rethrow;
     }
   }
@@ -91,6 +122,12 @@ class DonationService {
     String campaignId,
     int nominal,
   ) async {
+    final doc = await _col.doc(donationId).get();
+    if (!doc.exists) return;
+
+    final donaturId = doc.data()?['donaturId'] as String? ?? '';
+    final kampanyeJudul = doc.data()?['kampanyeJudul'] as String? ?? '';
+
     final batch = _db.batch();
 
     batch.update(_col.doc(donationId), {'status': DonationStatus.berhasil});
@@ -102,6 +139,14 @@ class DonationService {
     await batch.commit();
 
     await _campaignSvc.checkAndClose(campaignId);
+
+    if (donaturId.isNotEmpty) {
+      await NotificationService().kirimNotifikasiVerifikasi(
+        donaturId: donaturId,
+        kampanyeJudul: kampanyeJudul,
+        nominal: nominal,
+      );
+    }
   }
 
   Future<void> batalkanDonasi(String donationId) async {

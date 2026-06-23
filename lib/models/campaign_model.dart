@@ -39,18 +39,39 @@ class CampaignModel {
   factory CampaignModel.fromFirestore(Map<String, dynamic> d, String id) {
     return CampaignModel(
       id: id,
-      judul: d['judul'] ?? '',
-      deskripsi: d['deskripsi'] ?? '',
-      targetDana: (d['targetDana'] ?? 0) as int,
-      terkumpul: (d['terkumpul'] ?? 0) as int,
-      organisasiId: d['organisasiId'] ?? '',
-      organisasiNama: d['organisasiNama'] ?? '',
-      batasTanggal: (d['batasTanggal'] as Timestamp).toDate(),
-      status: d['status'] ?? 'aktif',
-      createdAt: (d['createdAt'] as Timestamp).toDate(),
+      judul: _readString(d['judul']),
+      deskripsi: _readString(d['deskripsi']),
+      targetDana: _readInt(d['targetDana']),
+      terkumpul: _readInt(d['terkumpul']),
+      organisasiId: _readString(d['organisasiId']),
+      organisasiNama: _readString(d['organisasiNama']),
+      batasTanggal: _readDateTime(d['batasTanggal']),
+      status: _readString(d['status']),
+      createdAt: _readDateTime(d['createdAt']),
       imageUrl: d['imageUrl'] as String?,
-      kategori: d['kategori'] ?? 'Lainnya',
+      kategori: _readString(d['kategori']),
     );
+  }
+
+  static String _readString(dynamic value) {
+    if (value == null) return '';
+    return value.toString();
+  }
+
+  static int _readInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  static DateTime _readDateTime(dynamic value) {
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    if (value is int) {
+      return DateTime.fromMillisecondsSinceEpoch(value);
+    }
+    final parsed = DateTime.tryParse(value?.toString() ?? '');
+    return parsed ?? DateTime.now();
   }
 
   Map<String, dynamic> toFirestore() => {

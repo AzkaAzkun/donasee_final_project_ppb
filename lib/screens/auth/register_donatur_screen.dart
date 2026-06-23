@@ -53,24 +53,6 @@ class _RegisterDonaturScreenState extends State<RegisterDonaturScreen> {
     }
   }
 
-  Future<void> _registerWithGoogle() async {
-    setState(() {
-      _loading = true;
-      _errorMsg = null;
-    });
-
-    try {
-      final auth = context.read<AuthService>();
-      await auth.signInWithGoogle();
-      if (mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
-      }
-    } catch (e) {
-      setState(() => _errorMsg = e.toString().replaceAll('Exception: ', ''));
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
 
   @override
   void dispose() {
@@ -415,73 +397,7 @@ class _RegisterDonaturScreenState extends State<RegisterDonaturScreen> {
                                     ),
                                     const SizedBox(height: 24),
 
-                                    // Divider
-                                    Row(
-                                      children: const [
-                                        Expanded(
-                                          child: Divider(
-                                            color: Color(0xFFC2C6D8),
-                                            thickness: 1,
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: EdgeInsets.symmetric(horizontal: 16),
-                                          child: Text(
-                                            'Atau daftar dengan',
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              color: Color(0xFF727687),
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                        Expanded(
-                                          child: Divider(
-                                            color: Color(0xFFC2C6D8),
-                                            thickness: 1,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
                                     const SizedBox(height: 24),
-
-                                    // Google Sign In Button
-                                    OutlinedButton(
-                                      onPressed: _loading ? null : _registerWithGoogle,
-                                      style: OutlinedButton.styleFrom(
-                                        side: const BorderSide(color: Color(0xFFC2C6D8)),
-                                        minimumSize: const Size.fromHeight(52),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        backgroundColor: Colors.white,
-                                        foregroundColor: const Color(0xFF191C1E),
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
-                                          Image.network(
-                                            'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/24px-Google_%22G%22_logo.svg.png',
-                                            width: 18,
-                                            height: 18,
-                                            errorBuilder: (context, error, stackTrace) => const Icon(
-                                              Icons.g_mobiledata,
-                                              size: 24,
-                                              color: Colors.blue,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          const Text(
-                                            'Daftar dengan Google',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 32),
 
                                     // Footer Link
                                     Row(

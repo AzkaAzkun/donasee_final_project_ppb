@@ -675,14 +675,6 @@ class ProfilScreen extends StatelessWidget {
               MainNavigation.navigationKey.currentState?.setIndex(1);
             },
           ),
-          const Divider(height: 1, color: Color(0xFFECEEF0), indent: 72),
-          _buildUserMenuItem(
-            context: context,
-            icon: Icons.info_outline,
-            title: 'Tentang Kami',
-            iconBg: const Color(0xFFF2F4F6),
-            iconColor: const Color(0xFF424656),
-          ),
         ],
       ),
     );

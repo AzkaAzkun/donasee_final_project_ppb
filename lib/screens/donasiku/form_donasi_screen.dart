@@ -5,10 +5,10 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../../models/campaign_model.dart';
 import '../../models/donation_model.dart';
-import '../../services/campaign_service.dart';
 import '../../services/donation_service.dart';
 import '../../services/exchange_rate_service.dart';
 import '../../services/auth_service.dart';
+import 'detail_donasi_screen.dart';
 
 class FormDonasiScreen extends StatefulWidget {
   final CampaignModel campaign;
@@ -114,169 +114,41 @@ class _FormDonasiScreenState extends State<FormDonasiScreen> {
       final donorName = _isAnonymous ? 'Hamba Allah' : user.nama;
       final supportMessage = _pesanCtrl.text.trim().isNotEmpty ? _pesanCtrl.text.trim() : null;
 
-      if (_selectedPaymentMethod == 'gopay' || _selectedPaymentMethod == 'bank_bca') {
-        // Otomatis Berhasil
-        final donasi = DonationModel(
-          id: '',
-          kampanyeId: widget.campaign.id,
-          kampanyeJudul: widget.campaign.judul,
-          donaturId: user.uid,
-          donaturNama: donorName,
-          nominal: nominal,
-          metode: _selectedPaymentMethod,
-          status: DonationStatus.berhasil,
-          createdAt: DateTime.now(),
-          pesan: supportMessage,
-          isAnonymous: _isAnonymous,
+      // Pre-generate Firebase Doc ID
+      final db = FirebaseFirestore.instance;
+      final docRef = db.collection('donations').doc();
+
+      // Save to Firestore with status pending (menunggu pembayaran)
+      final donasi = DonationModel(
+        id: docRef.id,
+        kampanyeId: widget.campaign.id,
+        kampanyeJudul: widget.campaign.judul,
+        donaturId: user.uid,
+        donaturNama: donorName,
+        nominal: nominal,
+        metode: 'transfer_bank_manual',
+        status: DonationStatus.pending,
+        buktiFotoUrl: null,
+        createdAt: DateTime.now(),
+        pesan: supportMessage,
+        isAnonymous: _isAnonymous,
+      );
+
+      await _svcDonasi.createDonationWithId(donasi);
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DetailDonasiScreen(donation: donasi),
+          ),
         );
-
-        final db = FirebaseFirestore.instance;
-        final batch = db.batch();
-        final newDocRef = db.collection('donations').doc();
-        batch.set(newDocRef, donasi.toFirestore());
-        batch.update(db.collection('campaigns').doc(widget.campaign.id), {
-          'terkumpul': FieldValue.increment(nominal),
-        });
-        await batch.commit();
-        await CampaignService().checkAndClose(widget.campaign.id);
-
-        if (mounted) {
-          await _showSuccessDialog(
-            title: 'Pembayaran Berhasil!',
-            content: 'Terima kasih! Pembayaran Anda sebesar ${_fmt.format(nominal)} menggunakan ${_selectedPaymentMethod == 'gopay' ? 'GoPay' : 'Transfer BCA'} telah berhasil diproses secara otomatis.',
-            isAutomatic: true,
-          );
-        }
-      } else {
-        // Manual Transfer (Pending)
-        final donasi = DonationModel(
-          id: '',
-          kampanyeId: widget.campaign.id,
-          kampanyeJudul: widget.campaign.judul,
-          donaturId: user.uid,
-          donaturNama: donorName,
-          nominal: nominal,
-          metode: _selectedPaymentMethod,
-          status: DonationStatus.pending,
-          createdAt: DateTime.now(),
-          pesan: supportMessage,
-          isAnonymous: _isAnonymous,
-        );
-
-        await _svcDonasi.createDonation(donasi);
-
-        if (mounted) {
-          await _showSuccessDialog(
-            title: 'Donasi Berhasil Dibuat!',
-            content: 'Silakan transfer ${_fmt.format(nominal)} ke rekening tujuan di bawah ini, lalu upload bukti transfer pada halaman Donasiku.',
-            isAutomatic: false,
-          );
-        }
       }
     } catch (e) {
       setState(() => _errorMsg = 'Gagal memproses donasi: $e');
     } finally {
       if (mounted) setState(() => _loadingSubmit = false);
     }
-  }
-
-  Future<void> _showSuccessDialog({
-    required String title,
-    required String content,
-    required bool isAutomatic,
-  }) async {
-    return showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                color: isAutomatic ? const Color(0xFFE7FFE5) : const Color(0xFFDAE1FF),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.check,
-                color: isAutomatic ? const Color(0xFF00682C) : const Color(0xFF0050CB),
-                size: 32,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              title,
-              style: const TextStyle(
-                fontFamily: 'Lexend',
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF191C1E),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 10),
-            Text(
-              content,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 13,
-                color: Color(0xFF727687),
-                height: 1.4,
-              ),
-            ),
-            if (!isAutomatic) ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF2F4F6),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Column(
-                  children: [
-                    _RekeningRow(label: 'Bank', value: 'BCA'),
-                    _RekeningRow(label: 'No. Rek', value: '1234567890'),
-                    _RekeningRow(label: 'a.n.', value: 'Yayasan Donasee'),
-                  ],
-                ),
-              ),
-            ],
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0050CB),
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                onPressed: () {
-                  Navigator.pop(context); // close dialog
-                  Navigator.pop(context); // go back to campaign detail
-                },
-                child: const Text(
-                  'Oke, Mengerti',
-                  style: TextStyle(
-                    fontFamily: 'Lexend',
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
@@ -638,32 +510,105 @@ class _FormDonasiScreenState extends State<FormDonasiScreen> {
         ),
         const SizedBox(height: 12),
         _buildPaymentMethodRow(
-          title: 'GoPay',
-          subtitle: 'Saldo: Rp 450.000',
-          code: 'gopay',
-          icon: Icons.account_balance_wallet_outlined,
-          iconBgColor: const Color(0xFF6DF5E1).withValues(alpha: 0.15),
-          iconColor: const Color(0xFF006F64),
-        ),
-        _buildPaymentMethodRow(
-          title: 'Transfer Bank BCA',
-          subtitle: 'Konfirmasi Otomatis',
-          code: 'bank_bca',
-          icon: Icons.account_balance_outlined,
-          iconBgColor: const Color(0xFFDAE1FF),
-          iconColor: const Color(0xFF0050CB),
-        ),
-        _buildPaymentMethodRow(
           title: 'Transfer Bank Manual',
           subtitle: 'Konfirmasi Manual',
           code: 'transfer_bank_manual',
           icon: Icons.account_balance_outlined,
-          iconBgColor: const Color(0xFFE6E8EA),
-          iconColor: const Color(0xFF727687),
+          iconBgColor: const Color(0xFFDAE1FF),
+          iconColor: const Color(0xFF0050CB),
         ),
+        const SizedBox(height: 12),
+        _buildBankInstructionsCard(),
       ],
     );
   }
+
+  Widget _buildBankInstructionsCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF2F4F6),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFFE0E3E5),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Transfer Ke Rekening Tujuan:',
+            style: TextStyle(
+              fontFamily: 'Lexend',
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF424656),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Bank BCA',
+                    style: TextStyle(
+                      fontFamily: 'Lexend',
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF191C1E),
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'a.n. Yayasan Donasee',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      color: Color(0xFF727687),
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  const Text(
+                    '1234567890',
+                    style: TextStyle(
+                      fontFamily: 'Lexend',
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0050CB),
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.copy, size: 20, color: Color(0xFF0050CB)),
+                    onPressed: () {
+                      Clipboard.setData(const ClipboardData(text: '1234567890'));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Nomor rekening berhasil disalin!'),
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                    tooltip: 'Salin nomor rekening',
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+
 
   Widget _buildPaymentMethodRow({
     required String title,
@@ -966,43 +911,4 @@ class _FormDonasiScreenState extends State<FormDonasiScreen> {
   }
 }
 
-class _RekeningRow extends StatelessWidget {
-  final String label;
-  final String value;
-  const _RekeningRow({required this.label, required this.value});
 
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 70,
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 12,
-                color: Color(0xFF727687),
-              ),
-            ),
-          ),
-          const Text(
-            ': ',
-            style: TextStyle(color: Color(0xFF727687)),
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF191C1E),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:donasee_final_project_ppb/models/user_model.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'image_upload_service.dart';
 
 class AuthService {
@@ -125,40 +124,6 @@ class AuthService {
     }
   }
 
-  Future<void> signInWithGoogle() async {
-    try {
-      final googleSignIn = GoogleSignIn();
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-      if (googleUser == null) {
-        return; // User cancelled
-      }
-
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final UserCredential userCred = await _auth.signInWithCredential(credential);
-      final User? firebaseUser = userCred.user;
-      if (firebaseUser == null) return;
-
-      final doc = await _db.collection('users').doc(firebaseUser.uid).get();
-      if (!doc.exists) {
-        final user = UserModel(
-          uid: firebaseUser.uid,
-          email: firebaseUser.email ?? '',
-          nama: firebaseUser.displayName ?? 'Donatur Donasee',
-          role: 'donatur',
-          createdAt: DateTime.now(),
-          isVerified: true,
-        );
-        await _db.collection('users').doc(firebaseUser.uid).set(user.toFirestore());
-      }
-    } catch (e) {
-      throw Exception('Gagal masuk dengan Google: ${e.toString()}');
-    }
-  }
 
   Future<UserModel> register({
     required String email,
@@ -258,10 +223,6 @@ class AuthService {
       if (uid == null) return;
 
       await _db.collection('users').doc(uid).update({'fcmToken': token});
-    } catch (e) {
-      if (kDebugMode) {
-        print('Gagal memperbarui FCM Token: $e');
-      }
-    }
+    } catch (_) {}
   }
 }

@@ -27,7 +27,7 @@ class _DetailDonasiAdminScreenState extends State<DetailDonasiAdminScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Donasi berhasil dikonfirmasi!'),
-          backgroundColor: Color(0xFF0050CB),
+          backgroundColor: Color(0xFF1D9E75),
         ),
       );
       Navigator.pop(context);
@@ -76,7 +76,7 @@ class _DetailDonasiAdminScreenState extends State<DetailDonasiAdminScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Detail Donasi'),
-        backgroundColor: const Color(0xFF0050CB),
+        backgroundColor: const Color(0xFF1D9E75),
         foregroundColor: Colors.white,
       ),
       body: SingleChildScrollView(
@@ -152,7 +152,7 @@ class _DetailDonasiAdminScreenState extends State<DetailDonasiAdminScreen> {
                 icon: const Icon(Icons.check_circle_outline),
                 label: const Text('Konfirmasi Donasi'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0050CB),
+                  backgroundColor: const Color(0xFF1D9E75),
                   foregroundColor: Colors.white,
                   minimumSize: const Size.fromHeight(48),
                   disabledBackgroundColor: Colors.grey.shade300,
@@ -196,7 +196,7 @@ class _DetailDonasiAdminScreenState extends State<DetailDonasiAdminScreen> {
       style: const TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w600,
-        color: Color(0xFF0050CB),
+        color: Color(0xFF085041),
       ),
     ),
   );

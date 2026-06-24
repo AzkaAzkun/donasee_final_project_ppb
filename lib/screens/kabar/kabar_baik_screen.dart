@@ -252,6 +252,19 @@ class _KabarBaikScreenState extends State<KabarBaikScreen> {
                                   ],
                                 ),
                               ),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.notifications_outlined,
+                                  color: Color(0xFF0050CB),
+                                ),
+                                onPressed: () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Belum ada notifikasi baru.'),
+                                    ),
+                                  );
+                                },
+                              ),
                             ],
                           ),
                         ),

@@ -676,7 +676,6 @@ class _ManajemenKampanyeScreenState extends State<ManajemenKampanyeScreen> {
                             );
                           },
                         ),
-                      const SizedBox(height: 80),
                     ],
                   ),
                 ),

@@ -22,6 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     final email = _emailController.text.trim();
+    debugPrint('[Login] Memulai proses masuk untuk email: $email');
 
     setState(() {
       _isLoading = true;
@@ -34,16 +35,20 @@ class _LoginScreenState extends State<LoginScreen> {
         email: email,
         password: _passwordController.text,
       );
+      debugPrint('[Login] Proses masuk berhasil dilakukan.');
     } catch (e) {
+      debugPrint('[Login] Proses masuk gagal. Error mentah: $e');
       setState(() {
         _errorMsg = _parseError(e.toString());
       });
+      debugPrint('[Login] Pesan error yang ditampilkan ke pengguna: $_errorMsg');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
   String _parseError(String raw) {
+    debugPrint('[Login] Mengurai error mentah: $raw');
     String cleaned = raw;
     if (cleaned.startsWith('Exception: ')) {
       cleaned = cleaned.replaceFirst('Exception: ', '');
@@ -220,13 +225,36 @@ class _LoginScreenState extends State<LoginScreen> {
                             const SizedBox(height: 18),
 
                             // Label Password with Lupa Password
-                            const Text(
-                              'Password',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF191C1E),
-                              ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Password',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF191C1E),
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Fitur Lupa Password akan segera hadir!'),
+                                        behavior: SnackBarBehavior.floating,
+                                      ),
+                                    );
+                                  },
+                                  child: Text(
+                                    'Lupa Password?',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: primaryColor,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 8),
                             // Field Password
@@ -325,7 +353,93 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 24),
 
+                      // Divider "Atau masuk dengan"
+                      Row(
+                        children: const [
+                          Expanded(
+                            child: Divider(
+                              color: Color(0xFFC2C6D8),
+                              thickness: 1,
+                            ),
+                          ),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              'Atau masuk dengan',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Color(0xFF727687),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Divider(
+                              color: Color(0xFFC2C6D8),
+                              thickness: 1,
+                            ),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 24),
+
+                      // Google Sign In (Social Login Placeholder)
+                      OutlinedButton(
+                        onPressed: _isLoading
+                            ? null
+                            : () async {
+                                setState(() {
+                                  _isLoading = true;
+                                  _errorMsg = null;
+                                });
+                                try {
+                                  await context.read<AuthService>().signInWithGoogle();
+                                } catch (e) {
+                                  setState(() {
+                                    _errorMsg = e.toString().replaceAll('Exception: ', '');
+                                  });
+                                } finally {
+                                  if (mounted) {
+                                    setState(() {
+                                      _isLoading = false;
+                                    });
+                                  }
+                                }
+                              },
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Color(0xFFC2C6D8)),
+                          minimumSize: const Size.fromHeight(52),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF191C1E),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Image.network(
+                              'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/24px-Google_%22G%22_logo.svg.png',
+                              width: 18,
+                              height: 18,
+                              errorBuilder: (context, error, stackTrace) => const Icon(
+                                  Icons.g_mobiledata,
+                                  size: 24,
+                                  color: Colors.blue,
+                                ),
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'Masuk dengan Google',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 32),
 
                       // Footer Signup Link
                       Row(

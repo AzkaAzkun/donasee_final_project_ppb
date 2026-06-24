@@ -39,39 +39,23 @@ class UserModel {
   bool get isSuperAdmin => role == 'super_admin';
 
   factory UserModel.fromFirestore(Map<String, dynamic> d, String uid) {
-    final roleVal = _readString(d['role']);
-    final actualRole = roleVal.isEmpty ? 'donatur' : roleVal;
+    final roleVal = d['role'] ?? 'donatur';
     return UserModel(
       uid: uid,
-      email: _readString(d['email']),
-      nama: _readString(d['nama']),
-      role: actualRole,
-      fcmToken: d['fcmToken'] as String?,
-      createdAt: _readDateTime(d['createdAt']),
-      fotoUrl: d['fotoUrl'] as String?,
-      organisasiNama: d['organisasiNama'] as String?,
-      organisasiAlamat: d['organisasiAlamat'] as String?,
-      organisasiTelepon: d['organisasiTelepon'] as String?,
-      suratResmiUrl: d['suratResmiUrl'] as String?,
-      isVerified: d['isVerified'] ?? (actualRole != 'admin'),
-      verifiedAt: d['verifiedAt'] != null ? _readDateTime(d['verifiedAt']) : null,
-      verifiedBy: d['verifiedBy'] as String?,
+      email: d['email'] ?? '',
+      nama: d['nama'] ?? '',
+      role: roleVal,
+      fcmToken: d['fcmToken'],
+      createdAt: (d['createdAt'] as Timestamp).toDate(),
+      fotoUrl: d['fotoUrl'],
+      organisasiNama: d['organisasiNama'],
+      organisasiAlamat: d['organisasiAlamat'],
+      organisasiTelepon: d['organisasiTelepon'],
+      suratResmiUrl: d['suratResmiUrl'],
+      isVerified: d['isVerified'] ?? (roleVal != 'admin'),
+      verifiedAt: d['verifiedAt'] != null ? (d['verifiedAt'] as Timestamp).toDate() : null,
+      verifiedBy: d['verifiedBy'],
     );
-  }
-
-  static String _readString(dynamic value) {
-    if (value == null) return '';
-    return value.toString();
-  }
-
-  static DateTime _readDateTime(dynamic value) {
-    if (value is Timestamp) return value.toDate();
-    if (value is DateTime) return value;
-    if (value is int) {
-      return DateTime.fromMillisecondsSinceEpoch(value);
-    }
-    final parsed = DateTime.tryParse(value?.toString() ?? '');
-    return parsed ?? DateTime.now();
   }
 
   Map<String, dynamic> toFirestore() => {

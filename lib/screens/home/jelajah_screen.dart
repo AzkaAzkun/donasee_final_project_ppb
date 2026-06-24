@@ -316,6 +316,19 @@ class _JelajahScreenState extends State<JelajahScreen> {
                           ],
                         ),
                       ),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.notifications_outlined,
+                          color: Color(0xFF0050CB),
+                        ),
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Belum ada notifikasi baru.'),
+                            ),
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -571,7 +584,7 @@ class _JelajahScreenState extends State<JelajahScreen> {
                             },
                           ),
 
-                        const SizedBox(height: 80),
+                        const SizedBox(height: 32),
                       ],
                     ),
                   ),
